@@ -334,217 +334,216 @@ function renderPreview(sc) {
   document.getElementById("preview-area").style.display = "block";
 }
 
-/* ── Render: print-optimised HTML for PDF ── */
-
-function renderPrintHtml(sc) {
-  const e = escapeHtml;
-
-  let headerMeta = `
-    <td class="meta-cell-name"><div class="meta-label">Player</div><div class="meta-value">${sc.meta.player_name ? e(sc.meta.player_name) : '&nbsp;'}</div></td>
-    <td class="meta-cell"><div class="meta-label">Date</div><div class="meta-value">&nbsp;</div></td>
-    <td class="meta-cell"><div class="meta-label">Par</div><div class="meta-value">${sc.overall_totals.par_total}</div></td>
-    <td class="meta-cell"><div class="meta-label">Distance</div><div class="meta-value">${sc.overall_totals.distance_total != null ? sc.overall_totals.distance_total + 'm' : '&nbsp;'}</div></td>`;
-
-  if (sc.meta.target_score != null) {
-    headerMeta += `<td class="meta-cell"><div class="meta-label">Target</div><div class="meta-value">${sc.meta.target_score}</div></td>`;
-  }
-  if (sc.meta.handicap_index_label) {
-    headerMeta += `
-      <td class="meta-cell"><div class="meta-label">HCP</div><div class="meta-value">${e(sc.meta.handicap_index_label)}</div></td>
-      <td class="meta-cell"><div class="meta-label">CR/Slope</div><div class="meta-value">${sc.meta.course_rating}/${sc.meta.slope_rating}</div></td>
-      <td class="meta-cell"><div class="meta-label">Strokes</div><div class="meta-value">${sc.meta.playing_strokes_total}</div></td>`;
-  }
-
-  /* Colgroup */
-  let colgroup = `<col class="col-hole"><col class="col-hcp"><col class="col-par">`;
-  if (sc.show_adjusted_par) colgroup += `<col class="col-adj">`;
-  colgroup += `<col class="col-dist">`;
-  if (sc.show_stableford_columns) colgroup += `<col class="col-strk"><col class="col-2pt">`;
-
-  /* Table head */
-  const ths = sc.main_columns.map((c) => `<th>${e(c)}</th>`).join("");
-
-  /* Table body */
-  const rows = sc.all_holes.map((h) => {
-    const cls = h.hole_number === 10 ? ' class="turn"' : "";
-    let cells = `<td>${h.hole_number}</td><td>${h.handicap}</td><td>${h.par}</td>`;
-    if (sc.show_adjusted_par) cells += `<td>${h.adjusted_par}</td>`;
-    cells += `<td>${h.distance != null ? h.distance : ''}</td>`;
-    if (sc.show_stableford_columns) {
-      cells += `<td>${h.strokes_received}</td><td>${h.two_points_score}</td>`;
-      cells += `<td class="wr"></td><td class="wr"></td>`;
-    }
-    cells += `<td class="wr"></td><td class="wr"></td><td class="wr"></td>`;
-    cells += `<td class="wr-sm"></td><td class="wr-sm"></td><td class="wr-sm"></td>`;
-    cells += `<td class="wr-sm"></td><td class="wr-sm"></td><td class="wr-sm"></td><td class="wr-sm"></td>`;
-    return `<tr${cls}>${cells}</tr>`;
-  }).join("\n");
-
-  /* Footer */
-  function frow(label, totals) {
-    let c = `<th colspan="2">${label}</th><th>${totals.par_total}</th>`;
-    if (sc.show_adjusted_par) c += `<th>${totals.adjusted_par_total}</th>`;
-    c += `<th>${totals.distance_total != null ? totals.distance_total : ''}</th><th colspan="${sc.summary_blank_colspan}"></th>`;
-    return `<tr>${c}</tr>`;
-  }
-
-  const legendParts = ["Hole", "HCP", "Par"];
-  if (sc.show_adjusted_par) legendParts.push("Adj");
-  legendParts.push("Dist");
-  if (sc.show_stableford_columns) legendParts.push("Strokes", "2pt@", "Net", "Pts");
-  legendParts.push("Score", "Putts", "Pen", "FIR", "FW Miss", "Grn Miss", "Up&Down", "SZ Reg", "Dn3", "Putt≤4ft");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<style>
-@page{size:216mm 140mm;margin:4mm 5mm}
-@media print{@page{margin:4mm 5mm}}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:5.5pt;line-height:1.2;color:#111;background:#fff;padding:4mm 5mm}
-.sc-header{width:100%;border-bottom:0.4mm solid #1a5c2e;margin-bottom:1mm;padding-bottom:1mm}
-.sc-header-table{width:100%;border-collapse:collapse}
-.sc-header-table td{border:none;vertical-align:bottom;padding:0}
-.sc-header-table .title-cell{text-align:left;width:40%}
-.sc-header-table .title-cell h1{font-size:8pt;font-weight:800;color:#1a5c2e;margin:0;white-space:normal;word-wrap:break-word}
-.sc-header-table .title-cell .subtitle{font-size:5.5pt;color:#555}
-.sc-header-table .meta-cell{text-align:right;padding-left:2mm;white-space:nowrap}
-.sc-header-table .meta-cell-name{text-align:right;padding-left:2mm;white-space:normal;word-wrap:break-word;max-width:30mm}
-.meta-label{font-size:4.5pt;text-transform:uppercase;letter-spacing:0.04em;color:#888}
-.meta-value{font-weight:700;font-size:5.5pt}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
-th,td{border:0.2mm solid #bbb;text-align:center;padding:0.5mm 0.3mm;font-size:5pt;overflow:hidden}
-thead th{background:#1a5c2e;color:#fff;font-size:4.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:0.6mm 0.3mm}
-col.col-hole{width:5.5%}col.col-hcp{width:5%}col.col-par{width:5%}col.col-dist{width:6.5%}col.col-adj{width:5.5%}col.col-strk{width:5%}col.col-2pt{width:5.5%}
-tbody td{height:4.5mm;font-weight:600}
-.wr{background:#f7f9f7}.wr-sm{background:#f7f9f7;font-size:5pt}
-.turn td{border-top:0.6mm solid #1a5c2e;background:rgba(26,92,46,0.06)}
-tfoot th{background:#e8f0e8;color:#1a5c2e;font-weight:700;font-size:5pt;padding:0.5mm 0.3mm}
-.sc-notes{margin-top:1mm;font-size:4.5pt;color:#666}
-.sc-notes table{width:100%;border-collapse:collapse}
-.sc-notes td{border:none;vertical-align:top;padding:0 1mm;text-align:left}
-.sc-notes .note-label{font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:4pt;color:#888}
-.sc-legend{margin-top:0.5mm;font-size:4pt;color:#999;text-align:center}
-</style>
-</head>
-<body>
-<div class="sc-header">
-  <table class="sc-header-table"><tr>
-    <td class="title-cell">
-      <h1>${e(sc.meta.club_name)} — ${e(sc.meta.course_name)}</h1>
-      <span class="subtitle">${sc.meta.tee_name ? `Tee ${e(sc.meta.tee_name)} · ` : ''}${e(sc.meta.scoring_mode)}</span>
-    </td>
-    ${headerMeta}
-  </tr></table>
-</div>
-<table>
-  <colgroup>${colgroup}</colgroup>
-  <thead><tr>${ths}</tr></thead>
-  <tbody>${rows}</tbody>
-  <tfoot>
-    ${frow("Front", sc.front_totals)}
-    ${frow("Back", sc.back_totals)}
-    ${frow("Total", sc.overall_totals)}
-  </tfoot>
-</table>
-<div class="sc-notes">
-  <table><tr>
-    <td><span class="note-label">FW miss:</span> ← or → arrows</td>
-    <td><span class="note-label">Green miss:</span> S / L / ← / →</td>
-    <td><span class="note-label">${e(sc.scoring_zone_rule_label)}</span></td>
-  </tr></table>
-</div>
-<div class="sc-legend">${e(legendParts.join(" · "))}</div>
-</body>
-</html>`;
-}
-
-/* ── PDF export ── */
-
-function renderPrintBody(sc) {
-  /* Returns just the inner body HTML + inline styles for the PDF container.
-     Reuses the same content as renderPrintHtml but without the <html> wrapper. */
-  const html = renderPrintHtml(sc);
-  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-  const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
-  if (!styleMatch || !bodyMatch) return null;
-
-  /* Scope every CSS selector under #pdf-render to avoid leaking styles */
-  const raw = styleMatch[1]
-    .replace(/@page\{[^}]*\}/g, "")
-    .replace(/@media[^{]*\{@page\{[^}]*\}\s*\}/g, "")
-    .replace(/body\s*\{[^}]*\}/g, "");
-  let scoped = "";
-  const re = /([^{}]+)\{([^}]*)\}/g;
-  let m;
-  while ((m = re.exec(raw)) !== null) {
-    const selectors = m[1].trim();
-    if (!selectors || selectors.startsWith("@")) continue;
-    const prefixed = selectors.split(",").map((s) => "#pdf-render " + s.trim()).join(",");
-    scoped += prefixed + "{" + m[2] + "}\n";
-  }
-
-  return { css: scoped, body: bodyMatch[1] };
-}
+/* ── PDF export (jsPDF + autotable) ── */
 
 function exportPdf() {
   if (!window._currentScorecard) return;
   const sc = window._currentScorecard;
-  const parts = renderPrintBody(sc);
-  if (!parts) return;
 
-  const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
-  const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+  /* Page: 216mm × 140mm landscape */
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [140, 216] });
+  const pageW = 216;
+  const margin = 4;
+  const contentW = pageW - margin * 2;
 
-  /* Overlay hides the render container from the user */
-  const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;z-index:100001;background:#fff;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:#333;font-size:1rem;";
-  overlay.textContent = "Generating PDF…";
-  document.body.appendChild(overlay);
+  const green = [26, 92, 46];
+  const white = [255, 255, 255];
+  const lightGreen = [232, 240, 232];
+  const writeGray = [247, 249, 247];
 
-  /* Container must be in-viewport for html2canvas to capture it */
-  const container = document.createElement("div");
-  container.id = "pdf-render";
-  container.style.cssText =
-    "position:fixed;top:0;left:0;z-index:100000;width:216mm;overflow:hidden;" +
-    "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:5.5pt;" +
-    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;box-sizing:border-box;";
-  container.innerHTML = `<style>${parts.css}</style>${parts.body}`;
-  document.body.appendChild(container);
+  /* ── Header ── */
+  let y = margin;
 
-  function cleanup() {
-    if (container.parentNode) container.parentNode.removeChild(container);
-    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...green);
+  const title = `${sc.meta.club_name} \u2014 ${sc.meta.course_name}`;
+  doc.text(title, margin, y + 3);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  doc.setTextColor(85, 85, 85);
+  const subtitle = (sc.meta.tee_name ? `Tee ${sc.meta.tee_name} \u00b7 ` : "") + sc.meta.scoring_mode;
+  doc.text(subtitle, margin, y + 6);
+
+  /* Meta fields on the right side of header */
+  const metaPairs = [];
+  metaPairs.push(["Player", sc.meta.player_name || ""]);
+  metaPairs.push(["Date", ""]);
+  metaPairs.push(["Par", String(sc.overall_totals.par_total)]);
+  if (sc.overall_totals.distance_total != null) {
+    metaPairs.push(["Dist", sc.overall_totals.distance_total + "m"]);
+  }
+  if (sc.meta.target_score != null) {
+    metaPairs.push(["Target", String(sc.meta.target_score)]);
+  }
+  if (sc.meta.handicap_index_label) {
+    metaPairs.push(["HCP", sc.meta.handicap_index_label]);
+    metaPairs.push(["CR/Slope", `${sc.meta.course_rating}/${sc.meta.slope_rating}`]);
+    metaPairs.push(["Strokes", String(sc.meta.playing_strokes_total)]);
   }
 
-  /* Wait for layout, then capture → blob → download link */
-  requestAnimationFrame(() => {
-    html2pdf()
-      .set({
-        margin: 0,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
-      })
-      .from(container)
-      .outputPdf("blob")
-      .then((blob) => {
-        cleanup();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      })
-      .catch((err) => {
-        cleanup();
-        alert("PDF generation failed: " + err.message);
-      });
+  let metaX = pageW - margin;
+  doc.setFontSize(4.5);
+  for (let i = metaPairs.length - 1; i >= 0; i--) {
+    const [label, value] = metaPairs[i];
+    const valW = doc.getTextWidth(value);
+    const lblW = doc.getTextWidth(label.toUpperCase());
+    const cellW = Math.max(valW, lblW) + 3;
+    metaX -= cellW;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(136, 136, 136);
+    doc.text(label.toUpperCase(), metaX + cellW, y + 2, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(5.5);
+    doc.setTextColor(17, 17, 17);
+    doc.text(value, metaX + cellW, y + 5, { align: "right" });
+    doc.setFontSize(4.5);
+  }
+
+  /* Header divider */
+  y += 8;
+  doc.setDrawColor(...green);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, pageW - margin, y);
+  y += 1.5;
+
+  /* ── Build table data ── */
+  const head = [sc.main_columns];
+
+  function holeRow(h) {
+    const cells = [String(h.hole_number), String(h.handicap), String(h.par)];
+    if (sc.show_adjusted_par) cells.push(h.adjusted_par != null ? String(h.adjusted_par) : "");
+    cells.push(h.distance != null ? String(h.distance) : "");
+    if (sc.show_stableford_columns) {
+      cells.push(String(h.strokes_received ?? ""), String(h.two_points_score ?? ""));
+      cells.push("", ""); /* Net, Pts — writable */
+    }
+    cells.push("", "", ""); /* Score, Putts, Pen */
+    cells.push("", "", "", "", "", "", ""); /* FIR, FW Miss, Green Miss, Up&Down, SZ Reg, Dn3, Putt<=4ft */
+    return cells;
+  }
+
+  function totalsRow(label, totals) {
+    const cells = [label, "", String(totals.par_total)];
+    if (sc.show_adjusted_par) cells.push(totals.adjusted_par_total != null ? String(totals.adjusted_par_total) : "");
+    cells.push(totals.distance_total != null ? String(totals.distance_total) : "");
+    const remaining = sc.main_columns.length - cells.length;
+    for (let i = 0; i < remaining; i++) cells.push("");
+    return cells;
+  }
+
+  const body = sc.all_holes.map(holeRow);
+  const foot = [
+    totalsRow("Front", sc.front_totals),
+    totalsRow("Back", sc.back_totals),
+    totalsRow("Total", sc.overall_totals),
+  ];
+
+  /* Determine which columns are pre-filled vs writable */
+  let prefilledCount = 3; /* Hole, HCP, Par */
+  if (sc.show_adjusted_par) prefilledCount++;
+  prefilledCount++; /* Distance */
+  if (sc.show_stableford_columns) prefilledCount += 2; /* Strokes, 2Pts@ */
+  const writableStart = prefilledCount;
+  const totalCols = sc.main_columns.length;
+
+  /* Column styles: pre-filled columns get fixed widths, writable stretch to fill */
+  const preW = [5.5, 5, 5]; /* Hole, HCP, Par */
+  if (sc.show_adjusted_par) preW.push(6);
+  preW.push(6.5); /* Distance */
+  if (sc.show_stableford_columns) preW.push(5, 6); /* Strokes, 2Pts@ */
+  const fixedSum = preW.reduce((a, b) => a + b, 0);
+  const writableCols = totalCols - prefilledCount;
+  const writableW = writableCols > 0 ? (contentW - fixedSum) / writableCols : 5;
+
+  const columnStyles = {};
+  for (let i = 0; i < totalCols; i++) {
+    columnStyles[i] = {
+      cellWidth: i < prefilledCount ? preW[i] : writableW,
+      halign: "center",
+    };
+  }
+  /* First column in footer rows spans 2 */
+  columnStyles[0] = { ...columnStyles[0] };
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: margin, right: margin },
+    tableWidth: contentW,
+    head: head,
+    body: body,
+    foot: foot,
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 5,
+      cellPadding: { top: 0.8, right: 0.3, bottom: 0.8, left: 0.3 },
+      lineColor: [187, 187, 187],
+      lineWidth: 0.15,
+      halign: "center",
+      valign: "middle",
+      textColor: [17, 17, 17],
+      fontStyle: "bold",
+      minCellHeight: 4.5,
+    },
+    headStyles: {
+      fillColor: green,
+      textColor: white,
+      fontStyle: "bold",
+      fontSize: 4.5,
+    },
+    footStyles: {
+      fillColor: lightGreen,
+      textColor: green,
+      fontStyle: "bold",
+      fontSize: 5,
+    },
+    columnStyles: columnStyles,
+    didParseCell: function (data) {
+      /* Writable cells get a light background */
+      if (data.section === "body" && data.column.index >= writableStart) {
+        data.cell.styles.fillColor = writeGray;
+        data.cell.styles.fontStyle = "normal";
+      }
+      /* Turn row (hole 10) gets green top border + tinted bg */
+      if (data.section === "body" && data.row.index === 9) {
+        data.cell.styles.fillColor = [240, 247, 240];
+      }
+    },
+    didDrawCell: function (data) {
+      /* Thicker top border on hole 10 row */
+      if (data.section === "body" && data.row.index === 9) {
+        doc.setDrawColor(...green);
+        doc.setLineWidth(0.4);
+        doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+      }
+    },
   });
+
+  /* ── Footer notes ── */
+  const tableEndY = doc.lastAutoTable.finalY + 1;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(4);
+  doc.setTextColor(102, 102, 102);
+  const notes = [
+    "FW miss: \u2190 or \u2192 arrows",
+    "Green miss: S / L / \u2190 / \u2192",
+    sc.scoring_zone_rule_label,
+  ];
+  doc.text(notes.join("    \u00b7    "), pageW / 2, tableEndY, { align: "center" });
+
+  /* ── Legend ── */
+  const legendParts = [...sc.main_columns];
+  doc.setFontSize(3.5);
+  doc.setTextColor(153, 153, 153);
+  doc.text(legendParts.join(" \u00b7 "), pageW / 2, tableEndY + 3, { align: "center" });
+
+  /* ── Download ── */
+  const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
+  const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+  doc.save(filename);
 }
 
 /* ── Form logic ── */
