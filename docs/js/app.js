@@ -298,7 +298,7 @@ function renderPreview(sc) {
     <section class="preview-toolbar">
       <a href="#" onclick="showForm(); return false;">← Back</a>
       <div class="toolbar-actions">
-        <button class="btn-export" onclick="exportPdf()">Print scorecard</button>
+        <button class="btn-export" onclick="exportPdf()">Download PDF</button>
       </div>
     </section>
     <section class="scorecard-sheet">
@@ -460,29 +460,45 @@ tfoot th{background:#e8f0e8;color:#1a5c2e;font-weight:700;font-size:5pt;padding:
 </html>`;
 }
 
-/* ── PDF export via print ── */
+/* ── PDF export ── */
 
 function exportPdf() {
   if (!window._currentScorecard) return;
-  const html = renderPrintHtml(window._currentScorecard);
+  const sc = window._currentScorecard;
+  const html = renderPrintHtml(sc);
 
-  /* Reuse or create a hidden iframe for printing */
-  let iframe = document.getElementById("print-frame");
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = "print-frame";
-    iframe.style.cssText = "position:fixed;width:0;height:0;border:none;left:-9999px;";
-    document.body.appendChild(iframe);
+  /* Render into a hidden container so html2pdf can measure it */
+  let container = document.getElementById("pdf-render");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "pdf-render";
+    container.style.cssText = "position:fixed;left:-9999px;top:0;";
+    document.body.appendChild(container);
   }
 
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
+  /* Create an iframe to isolate the print styles */
+  container.innerHTML = '<iframe style="width:216mm;height:140mm;border:none;"></iframe>';
+  const iframe = container.querySelector("iframe");
+  const idoc = iframe.contentDocument || iframe.contentWindow.document;
+  idoc.open();
+  idoc.write(html);
+  idoc.close();
 
   iframe.onload = () => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
+    const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
+    const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+
+    html2pdf()
+      .set({
+        margin: 0,
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 3, useCORS: true },
+        jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
+      })
+      .from(idoc.body)
+      .save()
+      .then(() => { container.innerHTML = ""; });
   };
 }
 
