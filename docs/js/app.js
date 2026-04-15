@@ -298,7 +298,7 @@ function renderPreview(sc) {
     <section class="preview-toolbar">
       <a href="#" onclick="showForm(); return false;">← Back</a>
       <div class="toolbar-actions">
-        <button class="btn-export" onclick="exportPdf()">Download PDF</button>
+        <button class="btn-export" onclick="exportPdf()">Print scorecard</button>
       </div>
     </section>
     <section class="scorecard-sheet">
@@ -465,11 +465,25 @@ tfoot th{background:#e8f0e8;color:#1a5c2e;font-weight:700;font-size:5pt;padding:
 function exportPdf() {
   if (!window._currentScorecard) return;
   const html = renderPrintHtml(window._currentScorecard);
-  const w = window.open("", "_blank");
-  if (!w) { alert("Please allow pop-ups to download the PDF."); return; }
-  w.document.write(html);
-  w.document.close();
-  w.onload = () => { w.print(); };
+
+  /* Reuse or create a hidden iframe for printing */
+  let iframe = document.getElementById("print-frame");
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.id = "print-frame";
+    iframe.style.cssText = "position:fixed;width:0;height:0;border:none;left:-9999px;";
+    document.body.appendChild(iframe);
+  }
+
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  iframe.onload = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  };
 }
 
 /* ── Form logic ── */
