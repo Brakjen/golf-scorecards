@@ -462,6 +462,25 @@ tfoot th{background:#e8f0e8;color:#1a5c2e;font-weight:700;font-size:5pt;padding:
 
 /* ── PDF export ── */
 
+function scopePrintCss(css) {
+  /* Strip @page / @media print / body rules, then prefix every selector with #pdf-render */
+  const cleaned = css
+    .replace(/@page\{[^}]*\}/g, "")
+    .replace(/@media\s+print\s*\{[^}]*\}/g, "")
+    .replace(/body\s*\{[^}]*\}/g, "");
+  const parts = cleaned.split("}");
+  const scoped = parts.map((part) => {
+    const idx = part.indexOf("{");
+    if (idx === -1) return "";
+    const selectors = part.substring(0, idx).trim();
+    const body = part.substring(idx);
+    if (!selectors || selectors.startsWith("@")) return part + "}";
+    const prefixed = selectors.split(",").map((s) => "#pdf-render " + s.trim()).join(", ");
+    return prefixed + body + "}";
+  });
+  return scoped.join("\n");
+}
+
 function exportPdf() {
   if (!window._currentScorecard) return;
   const sc = window._currentScorecard;
@@ -472,24 +491,20 @@ function exportPdf() {
   const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
   if (!styleMatch || !bodyMatch) return;
 
-  /* Build an off-screen container sized to the page dimensions */
+  /* Build an off-screen container with scoped styles */
   let container = document.getElementById("pdf-render");
   if (!container) {
     container = document.createElement("div");
     container.id = "pdf-render";
     document.body.appendChild(container);
   }
-  /* Apply the print body styles directly + keep it off-screen */
   container.style.cssText =
     "position:absolute;left:-9999px;top:0;width:216mm;" +
     "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:5.5pt;" +
-    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;";
+    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;" +
+    "box-sizing:border-box;margin:0;";
 
-  /* Inject scoped styles (rewrite bare selectors to be inside #pdf-render) */
-  const scopedCss = styleMatch[1]
-    .replace(/@page\{[^}]*\}/g, "")
-    .replace(/@media print\{[^}]*\}/g, "")
-    .replace(/body\{[^}]*\}/g, "");
+  const scopedCss = scopePrintCss(styleMatch[1]);
   container.innerHTML = `<style>${scopedCss}</style>${bodyMatch[1]}`;
 
   const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
@@ -505,7 +520,8 @@ function exportPdf() {
     })
     .from(container)
     .save()
-    .then(() => { container.innerHTML = ""; });
+    .then(() => { container.innerHTML = ""; })
+    .catch(() => { container.innerHTML = ""; });
 }
 
 /* ── Form logic ── */
