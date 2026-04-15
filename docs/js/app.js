@@ -467,39 +467,45 @@ function exportPdf() {
   const sc = window._currentScorecard;
   const html = renderPrintHtml(sc);
 
-  /* Render into a hidden container so html2pdf can measure it */
+  /* Extract <style> and <body> content from the full HTML document */
+  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+  const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
+  if (!styleMatch || !bodyMatch) return;
+
+  /* Build an off-screen container sized to the page dimensions */
   let container = document.getElementById("pdf-render");
   if (!container) {
     container = document.createElement("div");
     container.id = "pdf-render";
-    container.style.cssText = "position:fixed;left:-9999px;top:0;";
     document.body.appendChild(container);
   }
+  /* Apply the print body styles directly + keep it off-screen */
+  container.style.cssText =
+    "position:absolute;left:-9999px;top:0;width:216mm;" +
+    "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:5.5pt;" +
+    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;";
 
-  /* Create an iframe to isolate the print styles */
-  container.innerHTML = '<iframe style="width:216mm;height:140mm;border:none;"></iframe>';
-  const iframe = container.querySelector("iframe");
-  const idoc = iframe.contentDocument || iframe.contentWindow.document;
-  idoc.open();
-  idoc.write(html);
-  idoc.close();
+  /* Inject scoped styles (rewrite bare selectors to be inside #pdf-render) */
+  const scopedCss = styleMatch[1]
+    .replace(/@page\{[^}]*\}/g, "")
+    .replace(/@media print\{[^}]*\}/g, "")
+    .replace(/body\{[^}]*\}/g, "");
+  container.innerHTML = `<style>${scopedCss}</style>${bodyMatch[1]}`;
 
-  iframe.onload = () => {
-    const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
-    const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+  const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
+  const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
 
-    html2pdf()
-      .set({
-        margin: 0,
-        filename: filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
-      })
-      .from(idoc.body)
-      .save()
-      .then(() => { container.innerHTML = ""; });
-  };
+  html2pdf()
+    .set({
+      margin: 0,
+      filename: filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 3, useCORS: true, scrollY: 0, windowWidth: container.scrollWidth },
+      jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
+    })
+    .from(container)
+    .save()
+    .then(() => { container.innerHTML = ""; });
 }
 
 /* ── Form logic ── */
