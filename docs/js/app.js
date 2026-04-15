@@ -452,8 +452,8 @@ function exportPdf() {
   /* Column styles: pre-filled columns get fixed widths, writable stretch to fill */
   const preW = [5.5, 5, 5]; /* Hole, HCP, Par */
   if (sc.show_adjusted_par) preW.push(6);
-  preW.push(6.5); /* Distance */
-  if (sc.show_stableford_columns) preW.push(5, 6); /* Strokes, 2Pts@ */
+  preW.push(10); /* Distance */
+  if (sc.show_stableford_columns) preW.push(8, 6); /* Strokes, 2Pts@ */
   const fixedSum = preW.reduce((a, b) => a + b, 0);
   const writableCols = totalCols - prefilledCount;
   const writableW = writableCols > 0 ? (contentW - fixedSum) / writableCols : 5;
@@ -521,24 +521,6 @@ function exportPdf() {
       }
     },
   });
-
-  /* ── Footer notes ── */
-  const tableEndY = doc.lastAutoTable.finalY + 1;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(4);
-  doc.setTextColor(102, 102, 102);
-  const notes = [
-    "FW miss: \u2190 or \u2192 arrows",
-    "Green miss: S / L / \u2190 / \u2192",
-    sc.scoring_zone_rule_label,
-  ];
-  doc.text(notes.join("    \u00b7    "), pageW / 2, tableEndY, { align: "center" });
-
-  /* ── Legend ── */
-  const legendParts = [...sc.main_columns];
-  doc.setFontSize(3.5);
-  doc.setTextColor(153, 153, 153);
-  doc.text(legendParts.join(" \u00b7 "), pageW / 2, tableEndY + 3, { align: "center" });
 
   /* ── Download ── */
   const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
