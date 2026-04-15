@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Golf Scorecards</title>
+    <link rel="stylesheet" href="css/app.css">
+  </head>
+  <body>
+    <div id="form-area">
+      <main class="page-shell">
+        <section class="hero-card">
+          <div class="hero-copy">
+            <h1>Generate a printable golf scorecard.</h1>
+            <p class="lede">Choose your course and tee, then download a scorecard to take to the course. Add a target score or handicap to personalise the card.</p>
+            <img class="hero-image" src="golfcourse.png" alt="Golf course">
+          </div>
+
+          <form id="scorecard-form" class="scorecard-form">
+            <label>
+              <span>Player name</span>
+              <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+            </label>
+
+            <label>
+              <span>Course</span>
+              <select id="course-select" name="course_slug" required></select>
+            </label>
+
+            <div class="field-group">
+              <span>Tee</span>
+              <div id="tee-segmented" class="segmented-control"></div>
+            </div>
+
+            <div class="field-group">
+              <span>Scoring mode</span>
+              <div id="scoring-mode-segmented" class="segmented-control">
+                <input type="radio" name="scoring_mode" id="mode-stroke" value="stroke" checked>
+                <label for="mode-stroke">Stroke play</label>
+                <input type="radio" name="scoring_mode" id="mode-stableford" value="stableford">
+                <label for="mode-stableford">Stableford</label>
+              </div>
+            </div>
+
+            <label id="target-score-field">
+              <span>Target score</span>
+              <input type="number" name="target_score" min="1" max="200" placeholder="Optional, for adjusted par">
+              <small class="field-help">Used only in stroke play to build an adjusted-par strategy line.</small>
+            </label>
+
+            <label id="handicap-field">
+              <span>Handicap index</span>
+              <input type="text" name="handicap_index" inputmode="decimal" placeholder="Optional, e.g. 18.4 or +1.2">
+              <small class="field-help">Use this for Stableford or any round where strokes received should be shown.</small>
+            </label>
+
+            <button type="submit">Preview scorecard</button>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <div id="preview-area" style="display:none;">
+      <main class="page-shell page-shell--wide">
+        <!-- Filled by JS -->
+      </main>
+    </div>
+
+    <script src="js/courses.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

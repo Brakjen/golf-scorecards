@@ -1,0 +1,1 @@
+"""Scorecard domain package."""

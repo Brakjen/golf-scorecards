@@ -1,0 +1,1 @@
+"""Golf scorecards application package."""

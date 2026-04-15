@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Create Scorecard{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <section class="hero-card">
+    <div class="hero-copy">
+      <h1>Generate a printable golf scorecard.</h1>
+      <p class="lede">Choose your course and tee, then download a scorecard to take to the course. Add a target score or handicap to personalise the card.</p>
+      <img class="hero-image" src="/static/golfcourse.png" alt="Golf course">
+    </div>
+
+    <form class="scorecard-form" method="post" action="/scorecards/preview">
+      <label>
+        <span>Player name</span>
+        <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+      </label>
+
+      <label>
+        <span>Course</span>
+        <select id="course-select" name="course_slug" required>
+          {% for course in course_options %}
+          <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="field-group">
+        <span>Tee</span>
+        <div id="tee-segmented" class="segmented-control"></div>
+      </div>
+
+      <div class="field-group">
+        <span>Scoring mode</span>
+        <div id="scoring-mode-segmented" class="segmented-control">
+          <input type="radio" name="scoring_mode" id="mode-stroke" value="stroke" checked>
+          <label for="mode-stroke">Stroke play</label>
+          <input type="radio" name="scoring_mode" id="mode-stableford" value="stableford">
+          <label for="mode-stableford">Stableford</label>
+        </div>
+      </div>
+
+      <label id="target-score-field">
+        <span>Target score</span>
+        <input type="number" name="target_score" min="1" max="200" placeholder="Optional, for adjusted par">
+        <small class="field-help">Used only in stroke play to build an adjusted-par strategy line.</small>
+      </label>
+
+      <label id="handicap-field">
+        <span>Handicap index</span>
+        <input type="text" name="handicap_index" inputmode="decimal" placeholder="Optional, e.g. 18.4 or +1.2">
+        <small class="field-help">Use this for Stableford or any round where strokes received should be shown.</small>
+      </label>
+
+      <button type="submit">Preview scorecard</button>
+    </form>
+  </section>
+</main>
+
+<script>
+  const courseOptions = {{ course_options|tojson }};
+  const initialTeeName = {{ initial_tee_name|tojson }};
+  const courseSelect = document.getElementById("course-select");
+  const teeSegmented = document.getElementById("tee-segmented");
+  const scoringModeSegmented = document.getElementById("scoring-mode-segmented");
+  const stablefordRadio = document.getElementById("mode-stableford");
+  const targetScoreField = document.getElementById("target-score-field");
+  const targetScoreInput = targetScoreField.querySelector("input");
+  const handicapField = document.getElementById("handicap-field");
+  const handicapInput = handicapField.querySelector("input");
+
+  function getSelectedRadio(name) {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : null;
+  }
+
+  function updateTeeOptions(selectedCourseSlug) {
+    const selectedCourse = courseOptions.find((course) => course.course_slug === selectedCourseSlug);
+    teeSegmented.innerHTML = "";
+
+    if (!selectedCourse) {
+      return;
+    }
+
+    selectedCourse.tees.forEach((teeName, index) => {
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "tee_name";
+      input.id = `tee-${teeName}`;
+      input.value = teeName;
+      const label = document.createElement("label");
+      label.htmlFor = `tee-${teeName}`;
+      label.textContent = teeName;
+      teeSegmented.appendChild(input);
+      teeSegmented.appendChild(label);
+    });
+  }
+
+  function updateModeFields(scoringMode) {
+    const isStableford = scoringMode === "stableford";
+    targetScoreInput.disabled = isStableford;
+    targetScoreField.classList.toggle("is-disabled", isStableford);
+  }
+
+  function updateTeeState() {
+    const hasTee = !!getSelectedRadio("tee_name");
+    stablefordRadio.disabled = !hasTee;
+    handicapInput.disabled = !hasTee;
+    handicapField.classList.toggle("is-disabled", !hasTee);
+    if (!hasTee) {
+      const currentMode = getSelectedRadio("scoring_mode");
+      if (currentMode === "stableford") {
+        document.getElementById("mode-stroke").checked = true;
+        updateModeFields("stroke");
+      }
+      handicapInput.value = "";
+    }
+  }
+
+  // ── sessionStorage form cache ──
+  const STORAGE_KEY = "scorecard_form";
+  const form = document.querySelector(".scorecard-form");
+
+  function saveForm() {
+    const data = {
+      player_name: form.elements["player_name"].value,
+      course_slug: form.elements["course_slug"].value,
+      tee_name: getSelectedRadio("tee_name"),
+      scoring_mode: getSelectedRadio("scoring_mode"),
+      target_score: form.elements["target_score"].value,
+      handicap_index: form.elements["handicap_index"].value,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function restoreForm() {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+
+      if (data.course_slug) {
+        courseSelect.value = data.course_slug;
+        updateTeeOptions(data.course_slug);
+      }
+      if (data.tee_name) {
+        const radio = document.getElementById(`tee-${data.tee_name}`);
+        if (radio) radio.checked = true;
+      }
+      if (data.scoring_mode) {
+        const modeRadio = document.getElementById(`mode-${data.scoring_mode}`);
+        if (modeRadio) { modeRadio.checked = true; updateModeFields(data.scoring_mode); }
+      }
+
+      ["player_name", "target_score", "handicap_index"].forEach((name) => {
+        if (data[name] != null && data[name] !== "") {
+          const el = form.elements[name];
+          if (el) el.value = data[name];
+        }
+      });
+    } catch { /* ignore corrupt data */ }
+  }
+
+  // Initialise
+  updateTeeOptions(courseSelect.value);
+  updateModeFields(getSelectedRadio("scoring_mode") || "stroke");
+  restoreForm();
+  updateTeeState();
+
+  // Toggle behaviour for tee: click a selected radio to deselect it
+  teeSegmented.addEventListener("click", (e) => {
+    const label = e.target.closest("label");
+    if (!label) return;
+    e.preventDefault();
+    const input = document.getElementById(label.htmlFor);
+    if (!input) return;
+    input.checked = !input.checked;
+    updateTeeState();
+    saveForm();
+  });
+
+  // Scoring mode: standard radio behaviour (no deselect)
+  scoringModeSegmented.addEventListener("click", (e) => {
+    const label = e.target.closest("label");
+    if (!label) return;
+    e.preventDefault();
+    const input = document.getElementById(label.htmlFor);
+    if (!input || input.disabled) return;
+    input.checked = true;
+    updateModeFields(input.value);
+    saveForm();
+  });
+
+  form.addEventListener("input", saveForm);
+  form.addEventListener("change", saveForm);
+
+  courseSelect.addEventListener("change", (event) => {
+    updateTeeOptions(event.target.value);
+    updateTeeState();
+    saveForm();
+  });
+</script>
+{% endblock %}

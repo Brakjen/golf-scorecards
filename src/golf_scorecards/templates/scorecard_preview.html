@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Scorecard Preview{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide">
+  <section class="preview-toolbar">
+    <a href="/">← Back</a>
+    <div class="toolbar-actions">
+      <button class="btn-export" onclick="exportScorecard('pdf')">Download PDF</button>
+    </div>
+  </section>
+
+  <!-- Hidden form to POST scorecard data to export endpoints -->
+  <form id="export-form" method="post" style="display:none;">
+    <input type="hidden" name="player_name" value="{{ scorecard.meta.player_name or '' }}">
+    <input type="hidden" name="course_slug" value="{{ scorecard.meta.course_slug }}">
+    <input type="hidden" name="tee_name" value="{{ scorecard.meta.tee_name or '' }}">
+    <input type="hidden" name="scoring_mode" value="{{ scorecard.meta.scoring_mode }}">
+    {% if scorecard.meta.target_score is not none %}
+    <input type="hidden" name="target_score" value="{{ scorecard.meta.target_score }}">
+    {% endif %}
+    {% if scorecard.meta.handicap_index_label %}
+    <input type="hidden" name="handicap_index" value="{{ scorecard.meta.handicap_index_raw or '' }}">
+    {% endif %}
+  </form>
+
+  <section class="scorecard-sheet">
+    <header class="scorecard-header">
+      <div>
+        <p class="meta-label">Player</p>
+        <p>{{ scorecard.meta.player_name or '' }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Date</p>
+        <p></p>
+      </div>
+      <div>
+        <p class="meta-label">Club</p>
+        <p>{{ scorecard.meta.club_name }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Course</p>
+        <p>{{ scorecard.meta.course_name }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Tee</p>
+        <p>{{ scorecard.meta.tee_name or '' }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Mode</p>
+        <p>{{ scorecard.meta.scoring_mode }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Total par</p>
+        <p>{{ scorecard.overall_totals.par_total }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Total distance</p>
+        <p>{{ scorecard.overall_totals.distance_total|default('', true) }}</p>
+      </div>
+      {% if scorecard.meta.target_score is not none %}
+      <div>
+        <p class="meta-label">Target</p>
+        <p>{{ scorecard.meta.target_score }}</p>
+      </div>
+      {% endif %}
+      {% if scorecard.meta.handicap_index_label %}
+      <div>
+        <p class="meta-label">Handicap</p>
+        <p>{{ scorecard.meta.handicap_index_label }}</p>
+      </div>
+      <div>
+        <p class="meta-label">CR / Slope</p>
+        <p>{{ scorecard.meta.course_rating }} / {{ scorecard.meta.slope_rating }}</p>
+      </div>
+      <div>
+        <p class="meta-label">Playing strokes</p>
+        <p>{{ scorecard.meta.playing_strokes_total }}</p>
+      </div>
+      {% endif %}
+    </header>
+
+    <section class="table-layout">
+      <article class="card-panel card-panel--full">
+        <div class="panel-heading">
+          <div>
+            <h2>Score and per-hole metrics</h2>
+            <p class="panel-note">Front and back are kept in one grid. The shaded divider marks the turn after hole 9.</p>
+          </div>
+          <div>
+            <p class="panel-note">Use arrows for fairway miss and one of short, long, left, or right for green miss.</p>
+            <p class="panel-note">{{ scorecard.scoring_zone_rule_label }}</p>
+          </div>
+        </div>
+        <table class="scorecard-table">
+          <thead>
+            <tr>
+              {% for column in scorecard.main_columns %}
+              <th>{{ column }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+                {% if scorecard.show_stableford_columns %}
+                <p class="panel-note">The 2 Pts @ column shows the gross score that secures 2 Stableford points on each hole.</p>
+                {% endif %}
+            {% for hole in scorecard.all_holes %}
+            <tr class="{% if hole.hole_number == 10 %}turn-row{% endif %}">
+              <td>{{ hole.hole_number }}</td>
+              <td>{{ hole.handicap }}</td>
+              <td>{{ hole.par }}</td>
+              {% if scorecard.show_adjusted_par %}
+              <td>{{ hole.adjusted_par }}</td>
+              {% endif %}
+              <td>{{ hole.distance|default('', true) }}</td>
+              {% if scorecard.show_stableford_columns %}
+              <td>{{ hole.strokes_received }}</td>
+              <td>{{ hole.two_points_score }}</td>
+              <td class="blank-cell"></td>
+              <td class="blank-cell"></td>
+              {% endif %}
+              <td class="blank-cell"></td>
+              <td class="blank-cell"></td>
+              <td class="blank-cell"></td>
+              <td class="blank-cell blank-cell--check"></td>
+              <td class="blank-cell blank-cell--note"></td>
+              <td class="blank-cell blank-cell--note"></td>
+              <td class="blank-cell blank-cell--check"></td>
+              <td class="blank-cell blank-cell--check"></td>
+              <td class="blank-cell blank-cell--check"></td>
+              <td class="blank-cell blank-cell--check"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">Front</th>
+              <th>{{ scorecard.front_totals.par_total }}</th>
+              {% if scorecard.show_adjusted_par %}
+              <th>{{ scorecard.front_totals.adjusted_par_total }}</th>
+              {% endif %}
+              <th>{{ scorecard.front_totals.distance_total|default('', true) }}</th>
+              <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+            </tr>
+            <tr>
+              <th colspan="2">Back</th>
+              <th>{{ scorecard.back_totals.par_total }}</th>
+              {% if scorecard.show_adjusted_par %}
+              <th>{{ scorecard.back_totals.adjusted_par_total }}</th>
+              {% endif %}
+              <th>{{ scorecard.back_totals.distance_total|default('', true) }}</th>
+              <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+            </tr>
+            <tr>
+              <th colspan="2">Total</th>
+              <th>{{ scorecard.overall_totals.par_total }}</th>
+              {% if scorecard.show_adjusted_par %}
+              <th>{{ scorecard.overall_totals.adjusted_par_total }}</th>
+              {% endif %}
+              <th>{{ scorecard.overall_totals.distance_total|default('', true) }}</th>
+              <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+            </tr>
+          </tfoot>
+        </table>
+      </article>
+    </section>
+  </section>
+</main>
+
+<script>
+function exportScorecard(format) {
+  const form = document.getElementById('export-form');
+  form.action = '/scorecards/export/' + format;
+  form.submit();
+}
+</script>
+{% endblock %}

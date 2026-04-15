@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* ── Page geometry: standard golf scorecard ── */
+    @page {
+      size: 216mm 140mm;
+      margin: 4mm 5mm;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 5.5pt;
+      line-height: 1.2;
+      color: #111;
+      background: #fff;
+      padding: 4mm 5mm;
+    }
+
+    /* ── Header row ── */
+    .sc-header {
+      width: 100%;
+      border-bottom: 0.4mm solid #1a5c2e;
+      margin-bottom: 1mm;
+      padding-bottom: 1mm;
+    }
+
+    .sc-header-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .sc-header-table td {
+      border: none;
+      vertical-align: bottom;
+      padding: 0;
+    }
+
+    .sc-header-table .title-cell {
+      text-align: left;
+      width: 40%;
+    }
+
+    .sc-header-table .title-cell h1 {
+      font-size: 8pt;
+      font-weight: 800;
+      color: #1a5c2e;
+      margin: 0;
+      white-space: normal;
+      word-wrap: break-word;
+    }
+
+    .sc-header-table .title-cell .subtitle {
+      font-size: 5.5pt;
+      color: #555;
+    }
+
+    .sc-header-table .meta-cell {
+      text-align: right;
+      padding-left: 2mm;
+      white-space: nowrap;
+    }
+
+    .sc-header-table .meta-cell-name {
+      text-align: right;
+      padding-left: 2mm;
+      white-space: normal;
+      word-wrap: break-word;
+      max-width: 30mm;
+    }
+
+    .meta-label {
+      font-size: 4.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #888;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      font-size: 5.5pt;
+    }
+
+    /* ── Main scorecard table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 0.2mm solid #bbb;
+      text-align: center;
+      padding: 0.5mm 0.3mm;
+      font-size: 5pt;
+      overflow: hidden;
+    }
+
+    thead th {
+      background: #1a5c2e;
+      color: #fff;
+      font-size: 4.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.6mm 0.3mm;
+    }
+
+    /* Fixed info columns are slightly wider */
+    col.col-hole { width: 5.5%; }
+    col.col-hcp  { width: 5%; }
+    col.col-par  { width: 5%; }
+    col.col-dist { width: 6.5%; }
+    col.col-adj  { width: 5.5%; }
+    col.col-strk { width: 5%; }
+    col.col-2pt  { width: 5.5%; }
+
+    /* Data rows */
+    tbody td {
+      height: 4.5mm;
+      font-weight: 600;
+    }
+
+    /* Blank write-in cells */
+    .wr {
+      background: #f7f9f7;
+    }
+
+    .wr-sm {
+      background: #f7f9f7;
+      font-size: 5pt;
+    }
+
+    /* Turn divider */
+    .turn td {
+      border-top: 0.6mm solid #1a5c2e;
+      background: rgba(26, 92, 46, 0.06);
+    }
+
+    /* Footer totals */
+    tfoot th {
+      background: #e8f0e8;
+      color: #1a5c2e;
+      font-weight: 700;
+      font-size: 5pt;
+      padding: 0.5mm 0.3mm;
+    }
+
+    /* ── Notes row below table ── */
+    .sc-notes {
+      margin-top: 1mm;
+      font-size: 4.5pt;
+      color: #666;
+    }
+
+    .sc-notes table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .sc-notes td {
+      border: none;
+      vertical-align: top;
+      padding: 0 1mm;
+      text-align: left;
+    }
+
+    .sc-notes .note-label {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 4pt;
+      color: #888;
+    }
+
+    /* ── Legend ── */
+    .sc-legend {
+      margin-top: 0.5mm;
+      font-size: 4pt;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="sc-header">
+    <table class="sc-header-table"><tr>
+      <td class="title-cell">
+        <h1>{{ scorecard.meta.club_name }} — {{ scorecard.meta.course_name }}</h1>
+        <span class="subtitle">{% if scorecard.meta.tee_name %}Tee {{ scorecard.meta.tee_name }} · {% endif %}{{ scorecard.meta.scoring_mode | capitalize }}</span>
+      </td>
+      <td class="meta-cell-name">
+        <div class="meta-label">Player</div>
+        <div class="meta-value">{{ scorecard.meta.player_name or '&nbsp;' }}</div>
+      </td>
+      <td class="meta-cell">
+        <div class="meta-label">Date</div>
+        <div class="meta-value">&nbsp;</div>
+      </td>
+      <td class="meta-cell">
+        <div class="meta-label">Par</div>
+        <div class="meta-value">{{ scorecard.overall_totals.par_total }}</div>
+      </td>
+      <td class="meta-cell">
+        <div class="meta-label">Distance</div>
+        <div class="meta-value">{% if scorecard.overall_totals.distance_total is not none %}{{ scorecard.overall_totals.distance_total }}m{% else %}&nbsp;{% endif %}</div>
+      </td>
+      {% if scorecard.meta.target_score is not none %}
+      <td class="meta-cell">
+        <div class="meta-label">Target</div>
+        <div class="meta-value">{{ scorecard.meta.target_score }}</div>
+      </td>
+      {% endif %}
+      {% if scorecard.meta.handicap_index_label %}
+      <td class="meta-cell">
+        <div class="meta-label">HCP</div>
+        <div class="meta-value">{{ scorecard.meta.handicap_index_label }}</div>
+      </td>
+      <td class="meta-cell">
+        <div class="meta-label">CR/Slope</div>
+        <div class="meta-value">{{ scorecard.meta.course_rating }}/{{ scorecard.meta.slope_rating }}</div>
+      </td>
+      <td class="meta-cell">
+        <div class="meta-label">Strokes</div>
+        <div class="meta-value">{{ scorecard.meta.playing_strokes_total }}</div>
+      </td>
+      {% endif %}
+    </tr></table>
+  </div>
+
+  <table>
+    <colgroup>
+      <col class="col-hole">
+      <col class="col-hcp">
+      <col class="col-par">
+      {% if scorecard.show_adjusted_par %}<col class="col-adj">{% endif %}
+      <col class="col-dist">
+      {% if scorecard.show_stableford_columns %}
+      <col class="col-strk">
+      <col class="col-2pt">
+      {% endif %}
+      <!-- remaining columns auto-sized -->
+    </colgroup>
+    <thead>
+      <tr>
+        {% for column in scorecard.main_columns %}
+        <th>{{ column }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for hole in scorecard.all_holes %}
+      <tr class="{% if hole.hole_number == 10 %}turn{% endif %}">
+        <td>{{ hole.hole_number }}</td>
+        <td>{{ hole.handicap }}</td>
+        <td>{{ hole.par }}</td>
+        {% if scorecard.show_adjusted_par %}
+        <td>{{ hole.adjusted_par }}</td>
+        {% endif %}
+        <td>{{ hole.distance|default('', true) }}</td>
+        {% if scorecard.show_stableford_columns %}
+        <td>{{ hole.strokes_received }}</td>
+        <td>{{ hole.two_points_score }}</td>
+        <td class="wr"></td>
+        <td class="wr"></td>
+        {% endif %}
+        <td class="wr"></td>
+        <td class="wr"></td>
+        <td class="wr"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="2">Front</th>
+        <th>{{ scorecard.front_totals.par_total }}</th>
+        {% if scorecard.show_adjusted_par %}
+        <th>{{ scorecard.front_totals.adjusted_par_total }}</th>
+        {% endif %}
+        <th>{{ scorecard.front_totals.distance_total|default('', true) }}</th>
+        <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+      </tr>
+      <tr>
+        <th colspan="2">Back</th>
+        <th>{{ scorecard.back_totals.par_total }}</th>
+        {% if scorecard.show_adjusted_par %}
+        <th>{{ scorecard.back_totals.adjusted_par_total }}</th>
+        {% endif %}
+        <th>{{ scorecard.back_totals.distance_total|default('', true) }}</th>
+        <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+      </tr>
+      <tr>
+        <th colspan="2">Total</th>
+        <th>{{ scorecard.overall_totals.par_total }}</th>
+        {% if scorecard.show_adjusted_par %}
+        <th>{{ scorecard.overall_totals.adjusted_par_total }}</th>
+        {% endif %}
+        <th>{{ scorecard.overall_totals.distance_total|default('', true) }}</th>
+        <th colspan="{{ scorecard.summary_blank_colspan }}"></th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sc-notes">
+    <table><tr>
+      <td><span class="note-label">FW miss:</span> ← or → arrows</td>
+      <td><span class="note-label">Green miss:</span> S / L / ← / →</td>
+      <td><span class="note-label">{{ scorecard.scoring_zone_rule_label }}</span></td>
+    </tr></table>
+  </div>
+
+  <div class="sc-legend">
+    Hole · HCP · Par{% if scorecard.show_adjusted_par %} · Adj{% endif %} · Dist{% if scorecard.show_stableford_columns %} · Strokes · 2pt@ · Net · Pts{% endif %} · Score · Putts · Pen · FIR · FW Miss · Grn Miss · Up&amp;Down · SZ Reg · Dn3 · Putt≤4ft
+  </div>
+</body>
+</html>
