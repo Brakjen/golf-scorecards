@@ -367,7 +367,7 @@ function exportPdf() {
   const subtitle = (sc.meta.tee_name ? `Tee ${sc.meta.tee_name} \u00b7 ` : "") + sc.meta.scoring_mode;
   doc.text(subtitle, margin, y + 6);
 
-  /* Meta fields on the right side of header */
+  /* Meta fields spread across the full header width */
   const metaPairs = [];
   metaPairs.push(["Player", sc.meta.player_name || ""]);
   metaPairs.push(["Date", ""]);
@@ -379,27 +379,28 @@ function exportPdf() {
     metaPairs.push(["Target", String(sc.meta.target_score)]);
   }
   if (sc.meta.handicap_index_label) {
-    metaPairs.push(["HCP", sc.meta.handicap_index_label]);
+    metaPairs.push(["HCP Index", sc.meta.handicap_index_label]);
     metaPairs.push(["CR/Slope", `${sc.meta.course_rating}/${sc.meta.slope_rating}`]);
-    metaPairs.push(["Strokes", String(sc.meta.playing_strokes_total)]);
+    metaPairs.push(["Playing HCP", String(sc.meta.playing_strokes_total)]);
   }
 
-  let metaX = pageW - margin;
-  doc.setFontSize(4.5);
-  for (let i = metaPairs.length - 1; i >= 0; i--) {
+  /* Distribute meta fields evenly from left title area to right edge */
+  const metaStartX = 65; /* leave room for title on the left */
+  const metaEndX = pageW - margin;
+  const metaSpan = metaEndX - metaStartX;
+  const metaCellW = metaPairs.length > 0 ? metaSpan / metaPairs.length : 0;
+
+  for (let i = 0; i < metaPairs.length; i++) {
     const [label, value] = metaPairs[i];
-    const valW = doc.getTextWidth(value);
-    const lblW = doc.getTextWidth(label.toUpperCase());
-    const cellW = Math.max(valW, lblW) + 3;
-    metaX -= cellW;
+    const cellRight = metaStartX + metaCellW * (i + 1);
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(4.5);
     doc.setTextColor(136, 136, 136);
-    doc.text(label.toUpperCase(), metaX + cellW, y + 2, { align: "right" });
+    doc.text(label.toUpperCase(), cellRight - 1, y + 2, { align: "right" });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(5.5);
     doc.setTextColor(17, 17, 17);
-    doc.text(value, metaX + cellW, y + 5, { align: "right" });
-    doc.setFontSize(4.5);
+    doc.text(value, cellRight - 1, y + 5, { align: "right" });
   }
 
   /* Header divider */
