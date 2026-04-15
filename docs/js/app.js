@@ -494,44 +494,54 @@ function exportPdf() {
   const parts = renderPrintBody(sc);
   if (!parts) return;
 
-  /* Create a full-page overlay so the render container is visible to html2canvas
-     but the user just sees a white "loading" screen briefly */
+  const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
+  const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+
+  /* Overlay hides the render container from the user */
   const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:#333;font-size:1rem;";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:100001;background:#fff;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:#333;font-size:1rem;";
   overlay.textContent = "Generating PDF…";
   document.body.appendChild(overlay);
 
+  /* Container must be in-viewport for html2canvas to capture it */
   const container = document.createElement("div");
   container.id = "pdf-render";
   container.style.cssText =
-    "position:fixed;top:0;left:0;z-index:100000;width:216mm;" +
+    "position:fixed;top:0;left:0;z-index:100000;width:216mm;overflow:hidden;" +
     "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:5.5pt;" +
     "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;box-sizing:border-box;";
   container.innerHTML = `<style>${parts.css}</style>${parts.body}`;
   document.body.appendChild(container);
 
-  const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
-  const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
+  function cleanup() {
+    if (container.parentNode) container.parentNode.removeChild(container);
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  }
 
-  /* Small delay to let the browser lay out the container before capturing */
+  /* Wait for layout, then capture → blob → download link */
   requestAnimationFrame(() => {
     html2pdf()
       .set({
         margin: 0,
-        filename: filename,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
         jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
       })
       .from(container)
-      .save()
-      .then(() => {
-        document.body.removeChild(container);
-        document.body.removeChild(overlay);
+      .outputPdf("blob")
+      .then((blob) => {
+        cleanup();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       })
       .catch((err) => {
-        document.body.removeChild(container);
-        document.body.removeChild(overlay);
+        cleanup();
         alert("PDF generation failed: " + err.message);
       });
   });
