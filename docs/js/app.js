@@ -462,66 +462,79 @@ tfoot th{background:#e8f0e8;color:#1a5c2e;font-weight:700;font-size:5pt;padding:
 
 /* ── PDF export ── */
 
-function scopePrintCss(css) {
-  /* Strip @page / @media print / body rules, then prefix every selector with #pdf-render */
-  const cleaned = css
+function renderPrintBody(sc) {
+  /* Returns just the inner body HTML + inline styles for the PDF container.
+     Reuses the same content as renderPrintHtml but without the <html> wrapper. */
+  const html = renderPrintHtml(sc);
+  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+  const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
+  if (!styleMatch || !bodyMatch) return null;
+
+  /* Scope every CSS selector under #pdf-render to avoid leaking styles */
+  const raw = styleMatch[1]
     .replace(/@page\{[^}]*\}/g, "")
-    .replace(/@media\s+print\s*\{[^}]*\}/g, "")
+    .replace(/@media[^{]*\{@page\{[^}]*\}\s*\}/g, "")
     .replace(/body\s*\{[^}]*\}/g, "");
-  const parts = cleaned.split("}");
-  const scoped = parts.map((part) => {
-    const idx = part.indexOf("{");
-    if (idx === -1) return "";
-    const selectors = part.substring(0, idx).trim();
-    const body = part.substring(idx);
-    if (!selectors || selectors.startsWith("@")) return part + "}";
-    const prefixed = selectors.split(",").map((s) => "#pdf-render " + s.trim()).join(", ");
-    return prefixed + body + "}";
-  });
-  return scoped.join("\n");
+  let scoped = "";
+  const re = /([^{}]+)\{([^}]*)\}/g;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    const selectors = m[1].trim();
+    if (!selectors || selectors.startsWith("@")) continue;
+    const prefixed = selectors.split(",").map((s) => "#pdf-render " + s.trim()).join(",");
+    scoped += prefixed + "{" + m[2] + "}\n";
+  }
+
+  return { css: scoped, body: bodyMatch[1] };
 }
 
 function exportPdf() {
   if (!window._currentScorecard) return;
   const sc = window._currentScorecard;
-  const html = renderPrintHtml(sc);
+  const parts = renderPrintBody(sc);
+  if (!parts) return;
 
-  /* Extract <style> and <body> content from the full HTML document */
-  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-  const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
-  if (!styleMatch || !bodyMatch) return;
+  /* Create a full-page overlay so the render container is visible to html2canvas
+     but the user just sees a white "loading" screen briefly */
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:#333;font-size:1rem;";
+  overlay.textContent = "Generating PDF…";
+  document.body.appendChild(overlay);
 
-  /* Build an off-screen container with scoped styles */
-  let container = document.getElementById("pdf-render");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "pdf-render";
-    document.body.appendChild(container);
-  }
+  const container = document.createElement("div");
+  container.id = "pdf-render";
   container.style.cssText =
-    "position:absolute;left:-9999px;top:0;width:216mm;" +
+    "position:fixed;top:0;left:0;z-index:100000;width:216mm;" +
     "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:5.5pt;" +
-    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;" +
-    "box-sizing:border-box;margin:0;";
-
-  const scopedCss = scopePrintCss(styleMatch[1]);
-  container.innerHTML = `<style>${scopedCss}</style>${bodyMatch[1]}`;
+    "line-height:1.2;color:#111;background:#fff;padding:4mm 5mm;box-sizing:border-box;";
+  container.innerHTML = `<style>${parts.css}</style>${parts.body}`;
+  document.body.appendChild(container);
 
   const teePart = sc.meta.tee_name ? `_${sc.meta.tee_name}` : "";
   const filename = `scorecard_${sc.meta.course_name}${teePart}.pdf`.replace(/ /g, "_");
 
-  html2pdf()
-    .set({
-      margin: 0,
-      filename: filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 3, useCORS: true, scrollY: 0, windowWidth: container.scrollWidth },
-      jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
-    })
-    .from(container)
-    .save()
-    .then(() => { container.innerHTML = ""; })
-    .catch(() => { container.innerHTML = ""; });
+  /* Small delay to let the browser lay out the container before capturing */
+  requestAnimationFrame(() => {
+    html2pdf()
+      .set({
+        margin: 0,
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: "mm", format: [216, 140], orientation: "landscape" },
+      })
+      .from(container)
+      .save()
+      .then(() => {
+        document.body.removeChild(container);
+        document.body.removeChild(overlay);
+      })
+      .catch((err) => {
+        document.body.removeChild(container);
+        document.body.removeChild(overlay);
+        alert("PDF generation failed: " + err.message);
+      });
+  });
 }
 
 /* ── Form logic ── */
