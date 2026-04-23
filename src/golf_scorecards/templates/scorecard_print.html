@@ -264,20 +264,22 @@
         {% if scorecard.show_stableford_columns %}
         <td>{{ hole.strokes_received }}</td>
         <td>{{ hole.two_points_score }}</td>
+        {% endif %}
+        <td class="wr"></td>
+        {% if scorecard.show_stableford_columns %}
         <td class="wr"></td>
         <td class="wr"></td>
         {% endif %}
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
         <td class="wr"></td>
+        <td class="wr-sm"></td>
+        <td class="wr-sm"></td>
         <td class="wr"></td>
-        <td class="wr"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
-        <td class="wr-sm"></td>
       </tr>
       {% endfor %}
     </tbody>

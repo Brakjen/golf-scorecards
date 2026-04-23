@@ -167,21 +167,29 @@ class ScorecardBuilder:
         columns.append("Distance")
 
         if show_stableford_columns and scoring_mode == "stableford":
-            columns.extend(["Strokes", "2 Pts @", "Net", "Pts"])
+            columns.extend(["Strokes", "2 Pts @"])
 
         columns.extend(
             [
                 "Score",
-                "Putts",
-                "Pen",
+            ]
+        )
+
+        if show_stableford_columns and scoring_mode == "stableford":
+            columns.extend(["Pts", "Net"])
+
+        columns.extend(
+            [
                 "FIR",
                 "FW Miss",
-                "Green Miss",
-                "Up and Down",
                 "SZ in Reg",
                 "Down in 3",
+                "Green Miss",
+                "Up and Down",
+                "Putts",
                 "Putt <=4 ft",
                 "NFS",
+                "Pen",
             ]
         )
 

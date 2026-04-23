@@ -154,9 +154,13 @@ function buildMainColumns(scoringMode, showAdjustedPar, showStablefordColumns) {
   if (showAdjustedPar) cols.push("Adjusted Par");
   cols.push("Distance");
   if (showStablefordColumns && scoringMode === "stableford") {
-    cols.push("Strokes", "2 Pts @", "Net", "Pts");
+    cols.push("Strokes", "2 Pts @");
   }
-  cols.push("Score", "Putts", "Pen", "FIR", "FW Miss", "Green Miss", "Up and Down", "SZ in Reg", "Down in 3", "Putt <=4 ft", "NFS");
+  cols.push("Score");
+  if (showStablefordColumns && scoringMode === "stableford") {
+    cols.push("Pts", "Net");
+  }
+  cols.push("FIR", "FW Miss", "SZ in Reg", "Down in 3", "Green Miss", "Up and Down", "Putts", "Putt <=4 ft", "NFS", "Pen");
   return cols;
 }
 
@@ -270,17 +274,21 @@ function renderPreview(sc) {
     cells += `<td>${h.distance != null ? h.distance : ''}</td>`;
     if (sc.show_stableford_columns) {
       cells += `<td>${h.strokes_received}</td><td>${h.two_points_score}</td>`;
+    }
+    cells += `<td class="blank-cell"></td>`;
+    if (sc.show_stableford_columns) {
       cells += `<td class="blank-cell"></td><td class="blank-cell"></td>`;
     }
-    cells += `<td class="blank-cell"></td><td class="blank-cell"></td><td class="blank-cell"></td>`;
-    cells += `<td class="blank-cell blank-cell--check"></td>`;
-    cells += `<td class="blank-cell blank-cell--note"></td>`;
-    cells += `<td class="blank-cell blank-cell--note"></td>`;
-    cells += `<td class="blank-cell blank-cell--check"></td>`;
-    cells += `<td class="blank-cell blank-cell--check"></td>`;
-    cells += `<td class="blank-cell blank-cell--check"></td>`;
-    cells += `<td class="blank-cell blank-cell--check"></td>`;
-    cells += `<td class="blank-cell"></td>`;
+    cells += `<td class="blank-cell blank-cell--check"></td>`; /* FIR */
+    cells += `<td class="blank-cell blank-cell--note"></td>`;  /* FW Miss */
+    cells += `<td class="blank-cell blank-cell--check"></td>`; /* SZ in Reg */
+    cells += `<td class="blank-cell blank-cell--check"></td>`; /* Down in 3 */
+    cells += `<td class="blank-cell blank-cell--note"></td>`;  /* Green Miss */
+    cells += `<td class="blank-cell blank-cell--check"></td>`; /* Up and Down */
+    cells += `<td class="blank-cell"></td>`;                   /* Putts */
+    cells += `<td class="blank-cell blank-cell--check"></td>`; /* Putt <=4ft */
+    cells += `<td class="blank-cell"></td>`;                   /* NFS */
+    cells += `<td class="blank-cell"></td>`;                   /* Pen */
     return `<tr${trClass}>${cells}</tr>`;
   }).join("\n");
 
@@ -420,10 +428,12 @@ function exportPdf() {
     cells.push(h.distance != null ? String(h.distance) : "");
     if (sc.show_stableford_columns) {
       cells.push(String(h.strokes_received ?? ""), String(h.two_points_score ?? ""));
-      cells.push("", ""); /* Net, Pts — writable */
     }
-    cells.push("", "", ""); /* Score, Putts, Pen */
-    cells.push("", "", "", "", "", "", "", ""); /* FIR, FW Miss, Green Miss, Up&Down, SZ Reg, Dn3, Putt<=4ft, NFS */
+    cells.push(""); /* Score */
+    if (sc.show_stableford_columns) {
+      cells.push("", ""); /* Pts, Net — writable */
+    }
+    cells.push("", "", "", "", "", "", "", "", "", ""); /* FIR, FW Miss, SZ Reg, Dn3, Green Miss, Up&Down, Putts, Putt<=4ft, NFS, Pen */
     return cells;
   }
 
