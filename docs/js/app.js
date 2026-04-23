@@ -156,7 +156,7 @@ function buildMainColumns(scoringMode, showAdjustedPar, showStablefordColumns) {
   if (showStablefordColumns && scoringMode === "stableford") {
     cols.push("Strokes", "2 Pts @", "Net", "Pts");
   }
-  cols.push("Score", "Putts", "Pen", "FIR", "FW Miss", "Green Miss", "Up and Down", "SZ in Reg", "Down in 3", "Putt <=4 ft");
+  cols.push("Score", "Putts", "Pen", "FIR", "FW Miss", "Green Miss", "Up and Down", "SZ in Reg", "Down in 3", "Putt <=4 ft", "NFS");
   return cols;
 }
 
@@ -280,6 +280,7 @@ function renderPreview(sc) {
     cells += `<td class="blank-cell blank-cell--check"></td>`;
     cells += `<td class="blank-cell blank-cell--check"></td>`;
     cells += `<td class="blank-cell blank-cell--check"></td>`;
+    cells += `<td class="blank-cell"></td>`;
     return `<tr${trClass}>${cells}</tr>`;
   }).join("\n");
 
@@ -422,7 +423,7 @@ function exportPdf() {
       cells.push("", ""); /* Net, Pts — writable */
     }
     cells.push("", "", ""); /* Score, Putts, Pen */
-    cells.push("", "", "", "", "", "", ""); /* FIR, FW Miss, Green Miss, Up&Down, SZ Reg, Dn3, Putt<=4ft */
+    cells.push("", "", "", "", "", "", "", ""); /* FIR, FW Miss, Green Miss, Up&Down, SZ Reg, Dn3, Putt<=4ft, NFS */
     return cells;
   }
 

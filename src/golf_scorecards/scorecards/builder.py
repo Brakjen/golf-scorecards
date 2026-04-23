@@ -181,6 +181,7 @@ class ScorecardBuilder:
                 "SZ in Reg",
                 "Down in 3",
                 "Putt <=4 ft",
+                "NFS",
             ]
         )
 
