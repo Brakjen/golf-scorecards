@@ -9,6 +9,9 @@
       <h1>{{ snapshot.club_name }} — {{ snapshot.course_name }}</h1>
       <p class="entry-meta">
         Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        <span class="holes-badge">{{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}</span>
+        {% endif %}
         {% if round.player_name %} · {{ round.player_name }}{% endif %}
         · {{ round.round_date.isoformat() }}
       </p>
@@ -42,7 +45,7 @@
         </thead>
         <tbody>
           {% for hole in round.holes %}
-          {% if hole.hole_number == 10 %}
+          {% if hole.hole_number == 10 and round.holes_played == '18' %}
           <tr class="turn-row">
             <td colspan="17">Turn</td>
           </tr>
@@ -65,14 +68,14 @@
             <td>
               {% if hole.par > 3 %}
               <input type="checkbox" name="fir_{{ hole.hole_number }}" value="1"
-                     {% if hole.fir %}checked{% endif %}>
+                     tabindex="0" {% if hole.fir %}checked{% endif %}>
               {% else %}
               <span class="na">—</span>
               {% endif %}
             </td>
             <td>
               <input type="checkbox" name="gir_{{ hole.hole_number }}" value="1"
-                     {% if hole.gir %}checked{% endif %}>
+                     tabindex="0" {% if hole.gir %}checked{% endif %}>
             </td>
             <td>
               <input type="number" name="penalty_{{ hole.hole_number }}"
@@ -90,32 +93,32 @@
             </td>
             <td>
               <input type="checkbox" name="ud_{{ hole.hole_number }}" value="1"
-                     {% if hole.up_and_down %}checked{% endif %}>
+                     tabindex="0" {% if hole.up_and_down %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="sand_{{ hole.hole_number }}" value="1"
-                     {% if hole.sand_save %}checked{% endif %}>
+                     tabindex="0" {% if hole.sand_save %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
-                     {% if hole.sz_in_reg %}checked{% endif %}>
+                     tabindex="0" {% if hole.sz_in_reg %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="d3_{{ hole.hole_number }}" value="1"
-                     {% if hole.down_in_3 %}checked{% endif %}>
+                     tabindex="0" {% if hole.down_in_3 %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="putt4_{{ hole.hole_number }}" value="1"
-                     {% if hole.putt_under_4ft %}checked{% endif %}>
+                     tabindex="0" {% if hole.putt_under_4ft %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="made4_{{ hole.hole_number }}" value="1"
-                     {% if hole.made_over_4ft %}checked{% endif %}>
+                     tabindex="0" {% if hole.made_over_4ft %}checked{% endif %}>
             </td>
             <td>
-              <input type="text" name="notes_{{ hole.hole_number }}"
-                     value="{{ hole.notes or '' }}"
-                     class="input-notes" placeholder="…">
+              <textarea name="notes_{{ hole.hole_number }}"
+                        class="input-notes" placeholder="…"
+                        rows="1">{{ hole.notes or '' }}</textarea>
             </td>
           </tr>
           {% endfor %}
