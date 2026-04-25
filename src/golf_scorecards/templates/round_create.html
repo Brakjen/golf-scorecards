@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}New Round{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <section class="hero-card">
+    <div class="hero-copy">
+      <h1>Enter a round.</h1>
+      <p class="lede">Pick the course and tee you played, then transcribe your paper scorecard into the app.</p>
+    </div>
+
+    <form class="scorecard-form" method="post" action="/rounds">
+      <label>
+        <span>Player name</span>
+        <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+      </label>
+
+      <label>
+        <span>Date played</span>
+        <input type="date" name="round_date" value="">
+      </label>
+
+      <label>
+        <span>Course</span>
+        <select id="course-select" name="course_slug" required>
+          {% for course in course_options %}
+          <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="field-group">
+        <span>Tee</span>
+        <div id="tee-segmented" class="segmented-control"></div>
+        <input type="hidden" id="tee-hidden" name="tee_name" value="">
+      </div>
+
+      <button type="submit" id="submit-btn" disabled>Start entering scores</button>
+    </form>
+  </section>
+
+  <div class="back-link">
+    <a href="/">← Back to home</a>
+  </div>
+</main>
+
+<script>
+  const courseOptions = {{ course_options|tojson }};
+  const courseSelect = document.getElementById("course-select");
+  const teeSegmented = document.getElementById("tee-segmented");
+  const teeHidden = document.getElementById("tee-hidden");
+  const submitBtn = document.getElementById("submit-btn");
+
+  function updateTeeOptions(selectedCourseSlug) {
+    const selectedCourse = courseOptions.find((c) => c.course_slug === selectedCourseSlug);
+    teeSegmented.innerHTML = "";
+    teeHidden.value = "";
+    submitBtn.disabled = true;
+
+    if (!selectedCourse) return;
+
+    selectedCourse.tees.forEach((teeName) => {
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "tee_radio";
+      input.id = `tee-${teeName}`;
+      input.value = teeName;
+      const label = document.createElement("label");
+      label.htmlFor = `tee-${teeName}`;
+      label.textContent = teeName;
+      teeSegmented.appendChild(input);
+      teeSegmented.appendChild(label);
+    });
+  }
+
+  teeSegmented.addEventListener("click", (e) => {
+    const label = e.target.closest("label");
+    if (!label) return;
+    e.preventDefault();
+    const input = document.getElementById(label.htmlFor);
+    if (!input) return;
+    if (input.checked) {
+      input.checked = false;
+      teeHidden.value = "";
+      submitBtn.disabled = true;
+    } else {
+      input.checked = true;
+      teeHidden.value = input.value;
+      submitBtn.disabled = false;
+    }
+  });
+
+  courseSelect.addEventListener("change", (e) => {
+    updateTeeOptions(e.target.value);
+  });
+
+  updateTeeOptions(courseSelect.value);
+</script>
+{% endblock %}

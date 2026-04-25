@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Enter Round — {{ snapshot.course_name }} ({{ snapshot.tee_name }}){% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide">
+  <div class="entry-header">
+    <div>
+      <h1>{{ snapshot.club_name }} — {{ snapshot.course_name }}</h1>
+      <p class="entry-meta">
+        Tee {{ snapshot.tee_name }}
+        {% if round.player_name %} · {{ round.player_name }}{% endif %}
+        · {{ round.round_date.isoformat() }}
+      </p>
+    </div>
+    <a href="/rounds/new" class="btn-back">← New round</a>
+  </div>
+
+  <form method="post" action="/rounds/{{ round.id }}" class="entry-form">
+    <div class="entry-grid-wrapper">
+      <table class="entry-grid">
+        <thead>
+          <tr>
+            <th class="col-hole">Hole</th>
+            <th class="col-par">Par</th>
+            <th class="col-dist">Dist</th>
+            <th class="col-hcp">HCP</th>
+            <th class="col-score">Score</th>
+            <th class="col-putts">Putts</th>
+            <th class="col-check">FIR</th>
+            <th class="col-check">GIR</th>
+            <th class="col-pen">Pen</th>
+            <th class="col-miss">Miss</th>
+            <th class="col-check">U&D</th>
+            <th class="col-check">Sand</th>
+            <th class="col-check">SZ</th>
+            <th class="col-check">D3</th>
+            <th class="col-check">≤4ft</th>
+            <th class="col-check">>4ft</th>
+            <th class="col-notes">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hole in round.holes %}
+          {% if hole.hole_number == 10 %}
+          <tr class="turn-row">
+            <td colspan="17">Turn</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td class="cell-fixed">{{ hole.hole_number }}</td>
+            <td class="cell-fixed">{{ hole.par }}</td>
+            <td class="cell-fixed">{{ hole.distance }}</td>
+            <td class="cell-fixed">{{ hole.handicap }}</td>
+            <td>
+              <input type="number" name="score_{{ hole.hole_number }}"
+                     value="{{ hole.score if hole.score is not none else '' }}"
+                     min="1" max="20" class="input-num input-score" data-hole="{{ hole.hole_number }}">
+            </td>
+            <td>
+              <input type="number" name="putts_{{ hole.hole_number }}"
+                     value="{{ hole.putts if hole.putts is not none else '' }}"
+                     min="0" max="10" class="input-num input-putts" data-hole="{{ hole.hole_number }}">
+            </td>
+            <td>
+              {% if hole.par > 3 %}
+              <input type="checkbox" name="fir_{{ hole.hole_number }}" value="1"
+                     {% if hole.fir %}checked{% endif %}>
+              {% else %}
+              <span class="na">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <input type="checkbox" name="gir_{{ hole.hole_number }}" value="1"
+                     {% if hole.gir %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="number" name="penalty_{{ hole.hole_number }}"
+                     value="{{ hole.penalty_strokes if hole.penalty_strokes is not none else '' }}"
+                     min="0" max="10" class="input-num input-pen">
+            </td>
+            <td>
+              <select name="miss_{{ hole.hole_number }}" class="input-miss">
+                <option value="">—</option>
+                <option value="left" {% if hole.miss_direction == 'left' %}selected{% endif %}>L</option>
+                <option value="right" {% if hole.miss_direction == 'right' %}selected{% endif %}>R</option>
+                <option value="short" {% if hole.miss_direction == 'short' %}selected{% endif %}>S</option>
+                <option value="long" {% if hole.miss_direction == 'long' %}selected{% endif %}>Lo</option>
+              </select>
+            </td>
+            <td>
+              <input type="checkbox" name="ud_{{ hole.hole_number }}" value="1"
+                     {% if hole.up_and_down %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="sand_{{ hole.hole_number }}" value="1"
+                     {% if hole.sand_save %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
+                     {% if hole.sz_in_reg %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="d3_{{ hole.hole_number }}" value="1"
+                     {% if hole.down_in_3 %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="putt4_{{ hole.hole_number }}" value="1"
+                     {% if hole.putt_under_4ft %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="made4_{{ hole.hole_number }}" value="1"
+                     {% if hole.made_over_4ft %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="text" name="notes_{{ hole.hole_number }}"
+                     value="{{ hole.notes or '' }}"
+                     class="input-notes" placeholder="…">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Tot</th>
+            <th id="tot-par">{{ snapshot.par_total or '' }}</th>
+            <th id="tot-dist">{{ snapshot.total_distance or '' }}</th>
+            <th></th>
+            <th id="tot-score">—</th>
+            <th id="tot-putts">—</th>
+            <th id="tot-fir">—</th>
+            <th id="tot-gir">—</th>
+            <th id="tot-pen">—</th>
+            <th></th>
+            <th id="tot-ud">—</th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="entry-actions">
+      <button type="submit" class="btn-save">Save round</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  /* Auto-compute totals as the user enters data. */
+  const grid = document.querySelector(".entry-grid");
+
+  function sumInputs(selector) {
+    let total = 0;
+    let count = 0;
+    grid.querySelectorAll(selector).forEach((el) => {
+      const v = parseInt(el.value, 10);
+      if (!isNaN(v)) { total += v; count++; }
+    });
+    return count > 0 ? total : null;
+  }
+
+  function countChecked(namePrefix, total) {
+    let checked = 0;
+    let applicable = 0;
+    for (let i = 1; i <= 18; i++) {
+      const el = grid.querySelector(`[name="${namePrefix}${i}"]`);
+      if (el) {
+        applicable++;
+        if (el.checked) checked++;
+      }
+    }
+    return applicable > 0 ? `${checked}/${applicable}` : "—";
+  }
+
+  function updateTotals() {
+    const score = sumInputs(".input-score");
+    const putts = sumInputs(".input-putts");
+    const pen = sumInputs(".input-pen");
+
+    document.getElementById("tot-score").textContent = score !== null ? score : "—";
+    document.getElementById("tot-putts").textContent = putts !== null ? putts : "—";
+    document.getElementById("tot-pen").textContent = pen !== null ? pen : "—";
+    document.getElementById("tot-fir").textContent = countChecked("fir_", 14);
+    document.getElementById("tot-gir").textContent = countChecked("gir_", 18);
+    document.getElementById("tot-ud").textContent = countChecked("ud_", 18);
+  }
+
+  grid.addEventListener("input", updateTotals);
+  grid.addEventListener("change", updateTotals);
+  updateTotals();
+</script>
+{% endblock %}
