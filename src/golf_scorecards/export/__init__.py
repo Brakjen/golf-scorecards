@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import weasyprint  # type: ignore[import-untyped]
 from jinja2 import Environment, FileSystemLoader
 
 if TYPE_CHECKING:
@@ -37,5 +36,7 @@ class ExportService:
             Raw PDF bytes.
         """
         html_string = self._render_html(scorecard)
+        import weasyprint  # type: ignore[import-untyped]
+
         doc = weasyprint.HTML(string=html_string)
         return doc.write_pdf()  # type: ignore[no-any-return]
