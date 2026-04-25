@@ -14,6 +14,7 @@ def test_home_page_renders_course_form() -> None:
     assert "Golf Scorecards" in response.text
     assert "Generate Scorecard" in response.text
     assert "Enter Round" in response.text
+    assert "Start entering scores" in response.text
     assert "sola-golfklubb-forus" in response.text
     assert "Scoring mode" in response.text
     assert "Target score" in response.text

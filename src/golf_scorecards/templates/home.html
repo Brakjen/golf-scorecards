@@ -61,7 +61,35 @@
     <div class="action-card action-card--enter">
       <h2>Enter Round</h2>
       <p>Transcribe your paper scorecard into the app to track stats over time.</p>
-      <a href="/rounds/new" class="btn-primary btn-primary--block">Start entering scores</a>
+
+      <form class="scorecard-form" method="post" action="/rounds">
+        <label>
+          <span>Player name</span>
+          <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+        </label>
+
+        <label>
+          <span>Date played</span>
+          <input type="date" name="round_date" value="">
+        </label>
+
+        <label>
+          <span>Course</span>
+          <select id="round-course-select" name="course_slug" required>
+            {% for course in course_options %}
+            <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="field-group">
+          <span>Tee</span>
+          <div id="round-tee-segmented" class="segmented-control"></div>
+          <input type="hidden" id="round-tee-hidden" name="tee_name" value="">
+        </div>
+
+        <button type="submit" id="round-submit-btn" disabled>Start entering scores</button>
+      </form>
       {% if recent_rounds %}
       <a href="/rounds" class="btn-secondary">View round history</a>
       {% endif %}
@@ -70,7 +98,7 @@
 
   <!-- ── Quick stats (conditional) ─────────────────────── -->
   {% if stats and stats.rounds_count > 0 %}
-  <section class="landing-section">
+  <section class="landing-section landing-card">
     <h2 class="section-title">Quick Stats <span class="section-note">Last {{ stats.rounds_count }} round{{ 's' if stats.rounds_count != 1 else '' }}</span></h2>
     <div class="stat-bar">
       {% if stats.avg_score is not none %}
@@ -121,7 +149,7 @@
 
   <!-- ── Recent rounds (conditional) ───────────────────── -->
   {% if recent_rounds %}
-  <section class="landing-section">
+  <section class="landing-section landing-card">
     <h2 class="section-title">Recent Rounds</h2>
     <div class="round-list">
       {% for r in recent_rounds %}
@@ -297,5 +325,54 @@
     updateTeeState();
     saveForm();
   });
+
+  // ── Round creation form (Enter Round card) ──
+  const roundCourseSelect = document.getElementById("round-course-select");
+  const roundTeeSegmented = document.getElementById("round-tee-segmented");
+  const roundTeeHidden = document.getElementById("round-tee-hidden");
+  const roundSubmitBtn = document.getElementById("round-submit-btn");
+
+  function updateRoundTeeOptions(slug) {
+    const course = courseOptions.find((c) => c.course_slug === slug);
+    roundTeeSegmented.innerHTML = "";
+    roundTeeHidden.value = "";
+    roundSubmitBtn.disabled = true;
+    if (!course) return;
+    course.tees.forEach((teeName) => {
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "round_tee_radio";
+      input.id = `round-tee-${teeName}`;
+      input.value = teeName;
+      const label = document.createElement("label");
+      label.htmlFor = `round-tee-${teeName}`;
+      label.textContent = teeName;
+      roundTeeSegmented.appendChild(input);
+      roundTeeSegmented.appendChild(label);
+    });
+  }
+
+  roundTeeSegmented.addEventListener("click", (e) => {
+    const label = e.target.closest("label");
+    if (!label) return;
+    e.preventDefault();
+    const input = document.getElementById(label.htmlFor);
+    if (!input) return;
+    if (input.checked) {
+      input.checked = false;
+      roundTeeHidden.value = "";
+      roundSubmitBtn.disabled = true;
+    } else {
+      input.checked = true;
+      roundTeeHidden.value = input.value;
+      roundSubmitBtn.disabled = false;
+    }
+  });
+
+  roundCourseSelect.addEventListener("change", (e) => {
+    updateRoundTeeOptions(e.target.value);
+  });
+
+  updateRoundTeeOptions(roundCourseSelect.value);
 </script>
 {% endblock %}

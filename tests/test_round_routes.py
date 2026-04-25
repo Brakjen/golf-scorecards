@@ -195,14 +195,13 @@ def test_round_save_persists_scores(client: TestClient, db_path: str) -> None:
     )
 
     assert save_response.status_code == 303
-    assert f"/rounds/{round_id}/edit" in save_response.headers["location"]
+    assert save_response.headers["location"] == f"/rounds/{round_id}"
 
-    # Verify scores persisted by loading the entry form
-    entry_response = client.get(f"/rounds/{round_id}/edit")
-    assert entry_response.status_code == 200
-    # Score input should have value="4" pre-filled
-    assert 'value="4"' in entry_response.text
-    assert 'value="2"' in entry_response.text
+    # Verify scores persisted by loading the detail view
+    detail_response = client.get(f"/rounds/{round_id}")
+    assert detail_response.status_code == 200
+    # Detail view should show the total score (4*18=72)
+    assert "72" in detail_response.text
 
 
 def test_round_save_not_found(client: TestClient) -> None:

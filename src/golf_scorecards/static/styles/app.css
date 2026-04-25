@@ -875,6 +875,14 @@ tfoot th {
   margin-bottom: 32px;
 }
 
+.landing-card {
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  background: var(--panel);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
 .section-title {
   margin: 0 0 14px;
   font-family: var(--font-heading);

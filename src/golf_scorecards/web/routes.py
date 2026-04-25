@@ -402,7 +402,7 @@ async def round_save(
         )
 
     await round_service.save_holes(round_id, holes)
-    return RedirectResponse(url=f"/rounds/{round_id}/edit", status_code=303)
+    return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
 
 
 # ── Round history & detail routes ────────────────────────────────────
