@@ -374,3 +374,120 @@ async def round_save(
 
     await round_service.save_holes(round_id, holes)
     return RedirectResponse(url=f"/rounds/{round_id}/edit", status_code=303)
+
+
+# ── Round history & detail routes ────────────────────────────────────
+
+
+@router.get("/rounds", response_class=HTMLResponse)
+async def round_list(
+    request: Request,
+    round_service: RoundService = Depends(get_round_service),
+) -> HTMLResponse:
+    """Render the round history list.
+
+    Args:
+        request: The incoming HTTP request.
+        round_service: Injected round service.
+
+    Returns:
+        The rendered ``round_list.html`` template.
+    """
+    summaries = await round_service.list_rounds()
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="round_list.html",
+            context={"rounds": summaries},
+        ),
+    )
+
+
+@router.get("/rounds/{round_id}", response_class=HTMLResponse)
+async def round_detail(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> HTMLResponse:
+    """Render the read-only detail view for a saved round.
+
+    Args:
+        request: The incoming HTTP request.
+        round_id: The unique round identifier from the URL path.
+        round_service: Injected round service.
+
+    Returns:
+        The rendered ``round_detail.html`` template.
+
+    Raises:
+        HTTPException: 404 if the round does not exist.
+    """
+    try:
+        r = await round_service.get_round(round_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    snapshot = json.loads(r.course_snapshot)
+
+    # Compute summary stats for the detail header
+    scored_holes = [h for h in r.holes if h.score is not None]
+    total_score: int | None = sum(
+        cast(int, h.score) for h in scored_holes
+    ) if scored_holes else None
+    total_putts = sum(h.putts for h in scored_holes if h.putts is not None)
+    total_par = sum(h.par for h in scored_holes)
+    gir_count = sum(1 for h in r.holes if h.gir == 1)
+    gir_total = sum(1 for h in r.holes if h.gir is not None)
+    fir_holes = [h for h in r.holes if h.par > 3]
+    fir_count = sum(1 for h in fir_holes if h.fir == 1)
+    fir_total = sum(1 for h in fir_holes if h.fir is not None)
+
+    stats = {
+        "total_score": total_score,
+        "total_par": total_par,
+        "score_vs_par": (total_score - total_par) if total_score is not None else None,
+        "total_putts": total_putts,
+        "gir_count": gir_count,
+        "gir_total": gir_total,
+        "fir_count": fir_count,
+        "fir_total": fir_total,
+    }
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="round_detail.html",
+            context={"round": r, "snapshot": snapshot, "stats": stats},
+        ),
+    )
+
+
+@router.post("/rounds/{round_id}/delete")
+async def round_delete(
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Delete a round and redirect to the round history list.
+
+    Args:
+        round_id: The unique round identifier from the URL path.
+        round_service: Injected round service.
+
+    Returns:
+        A redirect to ``GET /rounds``.
+
+    Raises:
+        HTTPException: 404 if the round does not exist.
+    """
+    try:
+        await round_service.delete_round(round_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    return RedirectResponse(url="/rounds", status_code=303)
