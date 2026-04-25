@@ -244,3 +244,127 @@ def test_round_create_defaults_date(client: TestClient) -> None:
     entry_response = client.get(edit_url)
     assert entry_response.status_code == 200
     assert date.today().isoformat() in entry_response.text
+
+
+# ── Round history & detail tests ─────────────────────────────────────
+
+
+def test_round_list_empty(client: TestClient) -> None:
+    """GET /rounds with no data should render empty state."""
+    response = client.get("/rounds")
+    assert response.status_code == 200
+    assert "Round history" in response.text
+    assert "No rounds recorded yet" in response.text
+
+
+def test_round_list_shows_rounds(client: TestClient) -> None:
+    """GET /rounds should list rounds after creation."""
+    client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "player_name": "Tester",
+            "round_date": "2026-04-20",
+        },
+        follow_redirects=False,
+    )
+
+    response = client.get("/rounds")
+    assert response.status_code == 200
+    assert "Tester" in response.text
+    assert "Apr 20, 2026" in response.text
+
+
+def test_round_detail_renders(client: TestClient) -> None:
+    """GET /rounds/{id} should render the read-only detail view."""
+    create_response = client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "player_name": "Detail Player",
+            "round_date": "2026-04-20",
+        },
+        follow_redirects=False,
+    )
+    edit_url = create_response.headers["location"]
+    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+
+    response = client.get(f"/rounds/{round_id}")
+    assert response.status_code == 200
+    assert "Forus" in response.text
+    assert "Detail Player" in response.text
+    assert "Edit scores" in response.text
+    assert "Delete" in response.text
+
+
+def test_round_detail_with_scores(client: TestClient) -> None:
+    """GET /rounds/{id} should display scores and computed stats."""
+    create_response = client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "player_name": "Scorer",
+            "round_date": "2026-04-20",
+        },
+        follow_redirects=False,
+    )
+    edit_url = create_response.headers["location"]
+    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+
+    # Submit scores
+    form_data: dict[str, str] = {}
+    for i in range(1, 19):
+        form_data[f"score_{i}"] = "4"
+        form_data[f"putts_{i}"] = "2"
+        form_data[f"gir_{i}"] = "1"
+    client.post(f"/rounds/{round_id}", data=form_data, follow_redirects=False)
+
+    response = client.get(f"/rounds/{round_id}")
+    assert response.status_code == 200
+    # Total score = 4 * 18 = 72
+    assert "72" in response.text
+    # Total putts = 2 * 18 = 36
+    assert "36" in response.text
+    # GIR 18/18
+    assert "18/18" in response.text
+
+
+def test_round_detail_not_found(client: TestClient) -> None:
+    """GET /rounds/{id} should return 404 for unknown round ID."""
+    response = client.get("/rounds/nonexistent")
+    assert response.status_code == 404
+
+
+def test_round_delete(client: TestClient) -> None:
+    """POST /rounds/{id}/delete should remove the round and redirect."""
+    create_response = client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "round_date": "2026-04-20",
+        },
+        follow_redirects=False,
+    )
+    edit_url = create_response.headers["location"]
+    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+
+    delete_response = client.post(
+        f"/rounds/{round_id}/delete",
+        follow_redirects=False,
+    )
+    assert delete_response.status_code == 303
+    assert delete_response.headers["location"] == "/rounds"
+
+    # Verify round is gone
+    detail_response = client.get(f"/rounds/{round_id}")
+    assert detail_response.status_code == 404
+
+
+def test_round_delete_not_found(client: TestClient) -> None:
+    """POST /rounds/{id}/delete should return 404 for unknown round ID."""
+    response = client.post("/rounds/nonexistent/delete")
+    assert response.status_code == 404
