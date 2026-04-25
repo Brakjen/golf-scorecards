@@ -12,10 +12,12 @@ class Settings(BaseSettings):
         app_name: Display name of the application.
         app_env: Current environment (e.g. ``"development"``).
         debug: Whether debug mode is enabled.
+        db_path: Filesystem path to the SQLite database file.
     """
     app_name: str = "Golf Scorecards API"
     app_env: str = "development"
     debug: bool = True
+    db_path: str = "data/golf_scorecards.db"
 
     model_config = SettingsConfigDict(
         env_file=".env",
