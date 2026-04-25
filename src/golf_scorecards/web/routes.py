@@ -12,6 +12,7 @@ from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
 from golf_scorecards.rounds.models import RoundHole
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
+from golf_scorecards.rounds.stats import compute_quick_stats
 from golf_scorecards.scorecards.builder import ScorecardBuilder
 from golf_scorecards.scorecards.forms import ScorecardFormData, parse_scorecard_form
 from golf_scorecards.scorecards.models import PrintableScorecard
@@ -86,11 +87,37 @@ def _build_scorecard(
 async def home(
     request: Request,
     catalog_service: CatalogService = Depends(get_catalog_service),
+    round_service: RoundService = Depends(get_round_service),
 ) -> HTMLResponse:
-    """Render the course-selection and scorecard-creation form."""
+    """Render the landing page with action cards, quick stats, and recent rounds.
+
+    Args:
+        request: The incoming HTTP request.
+        catalog_service: Injected catalog service for course options.
+        round_service: Injected round service for recent rounds and stats.
+
+    Returns:
+        The rendered ``home.html`` template.
+    """
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
     initial_tee = initial_course["tees"][0]
+
+    summaries = await round_service.list_rounds()
+    recent = summaries[:3]
+
+    # Load full round data for the last 5 rounds to compute quick stats
+    stats = None
+    if summaries:
+        stats_rounds = []
+        for s in summaries[:5]:
+            try:
+                r = await round_service.get_round(s.id)
+                stats_rounds.append(r)
+            except RoundNotFoundError:
+                continue
+        if stats_rounds:
+            stats = compute_quick_stats(stats_rounds)
 
     return cast(
         HTMLResponse,
@@ -101,6 +128,8 @@ async def home(
                 "course_options": course_options,
                 "initial_course_slug": initial_course["course_slug"],
                 "initial_tee_name": initial_tee,
+                "recent_rounds": recent,
+                "stats": stats,
             },
         ),
     )

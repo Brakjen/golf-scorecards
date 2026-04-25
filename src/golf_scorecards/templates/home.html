@@ -1,61 +1,158 @@
 {% extends "base.html" %}
 
-{% block title %}Create Scorecard{% endblock %}
+{% block title %}Golf Scorecards{% endblock %}
 
 {% block body %}
 <main class="page-shell">
-  <section class="hero-card">
-    <div class="hero-copy">
-      <h1>Generate a printable golf scorecard.</h1>
-      <p class="lede">Choose your course and tee, then download a scorecard to take to the course. Add a target score or handicap to personalise the card.</p>
-      <img class="hero-image" src="/static/golfcourse.png" alt="Golf course">
+  <h1 class="landing-title">Golf Scorecards</h1>
+
+  <!-- ── Action cards ──────────────────────────────────── -->
+  <div class="action-cards">
+    <div class="action-card">
+      <h2>Generate Scorecard</h2>
+      <p>Pick course &amp; tee, download a PDF to print and take to the course.</p>
+
+      <form class="scorecard-form" method="post" action="/scorecards/preview">
+        <label>
+          <span>Player name</span>
+          <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+        </label>
+
+        <label>
+          <span>Course</span>
+          <select id="course-select" name="course_slug" required>
+            {% for course in course_options %}
+            <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="field-group">
+          <span>Tee</span>
+          <div id="tee-segmented" class="segmented-control"></div>
+        </div>
+
+        <div class="field-group">
+          <span>Scoring mode</span>
+          <div id="scoring-mode-segmented" class="segmented-control">
+            <input type="radio" name="scoring_mode" id="mode-stroke" value="stroke" checked>
+            <label for="mode-stroke">Stroke play</label>
+            <input type="radio" name="scoring_mode" id="mode-stableford" value="stableford">
+            <label for="mode-stableford">Stableford</label>
+          </div>
+        </div>
+
+        <label id="target-score-field">
+          <span>Target score</span>
+          <input type="number" name="target_score" min="1" max="200" placeholder="Optional, for adjusted par">
+          <small class="field-help">Used only in stroke play to build an adjusted-par strategy line.</small>
+        </label>
+
+        <label id="handicap-field">
+          <span>Handicap index</span>
+          <input type="text" name="handicap_index" inputmode="decimal" placeholder="Optional, e.g. 18.4 or +1.2">
+          <small class="field-help">Use this for Stableford or any round where strokes received should be shown.</small>
+        </label>
+
+        <button type="submit">Preview scorecard</button>
+      </form>
     </div>
 
-    <form class="scorecard-form" method="post" action="/scorecards/preview">
-      <label>
-        <span>Player name</span>
-        <input type="text" name="player_name" value="" placeholder="Player name (optional)">
-      </label>
+    <div class="action-card action-card--enter">
+      <h2>Enter Round</h2>
+      <p>Transcribe your paper scorecard into the app to track stats over time.</p>
+      <a href="/rounds/new" class="btn-primary btn-primary--block">Start entering scores</a>
+      {% if recent_rounds %}
+      <a href="/rounds" class="btn-secondary">View round history</a>
+      {% endif %}
+    </div>
+  </div>
 
-      <label>
-        <span>Course</span>
-        <select id="course-select" name="course_slug" required>
-          {% for course in course_options %}
-          <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-
-      <div class="field-group">
-        <span>Tee</span>
-        <div id="tee-segmented" class="segmented-control"></div>
+  <!-- ── Quick stats (conditional) ─────────────────────── -->
+  {% if stats and stats.rounds_count > 0 %}
+  <section class="landing-section">
+    <h2 class="section-title">Quick Stats <span class="section-note">Last {{ stats.rounds_count }} round{{ 's' if stats.rounds_count != 1 else '' }}</span></h2>
+    <div class="stat-bar">
+      {% if stats.avg_score is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_score }}</span>
+        <span class="stat-block__label">Avg Score</span>
       </div>
-
-      <div class="field-group">
-        <span>Scoring mode</span>
-        <div id="scoring-mode-segmented" class="segmented-control">
-          <input type="radio" name="scoring_mode" id="mode-stroke" value="stroke" checked>
-          <label for="mode-stroke">Stroke play</label>
-          <input type="radio" name="scoring_mode" id="mode-stableford" value="stableford">
-          <label for="mode-stableford">Stableford</label>
-        </div>
+      {% endif %}
+      {% if stats.gir_pct is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.gir_pct }}%</span>
+        <span class="stat-block__label">GIR</span>
       </div>
-
-      <label id="target-score-field">
-        <span>Target score</span>
-        <input type="number" name="target_score" min="1" max="200" placeholder="Optional, for adjusted par">
-        <small class="field-help">Used only in stroke play to build an adjusted-par strategy line.</small>
-      </label>
-
-      <label id="handicap-field">
-        <span>Handicap index</span>
-        <input type="text" name="handicap_index" inputmode="decimal" placeholder="Optional, e.g. 18.4 or +1.2">
-        <small class="field-help">Use this for Stableford or any round where strokes received should be shown.</small>
-      </label>
-
-      <button type="submit">Preview scorecard</button>
-    </form>
+      {% endif %}
+      {% if stats.fir_pct is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.fir_pct }}%</span>
+        <span class="stat-block__label">FIR</span>
+      </div>
+      {% endif %}
+      {% if stats.avg_putts is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_putts }}</span>
+        <span class="stat-block__label">Putts / Round</span>
+      </div>
+      {% endif %}
+      {% if stats.putts_per_gir is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.putts_per_gir }}</span>
+        <span class="stat-block__label">Putts / GIR</span>
+      </div>
+      {% endif %}
+      {% if stats.up_and_down_pct is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.up_and_down_pct }}%</span>
+        <span class="stat-block__label">Scrambling</span>
+      </div>
+      {% endif %}
+      {% if stats.avg_penalties is not none and stats.avg_penalties > 0 %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_penalties }}</span>
+        <span class="stat-block__label">Pen / Round</span>
+      </div>
+      {% endif %}
+    </div>
   </section>
+  {% endif %}
+
+  <!-- ── Recent rounds (conditional) ───────────────────── -->
+  {% if recent_rounds %}
+  <section class="landing-section">
+    <h2 class="section-title">Recent Rounds</h2>
+    <div class="round-list">
+      {% for r in recent_rounds %}
+      <a href="/rounds/{{ r.id }}" class="round-card">
+        <div class="round-card__date">{{ r.round_date.strftime('%b %d, %Y') }}</div>
+        <div class="round-card__course">
+          {{ r.course_slug | replace('-', ' ') | title }}
+          <span class="round-card__tee">({{ r.tee_name }})</span>
+        </div>
+        {% if r.player_name %}
+        <div class="round-card__player">{{ r.player_name }}</div>
+        {% endif %}
+        <div class="round-card__stats">
+          {% if r.total_score is not none %}
+          <span class="stat-pill">{{ r.total_score }}</span>
+          {% endif %}
+          {% if r.total_putts is not none %}
+          <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
+          {% endif %}
+          {% if r.gir_total and r.gir_total > 0 %}
+          <span class="stat-pill stat-pill--muted">GIR {{ r.gir_count }}/{{ r.gir_total }}</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="see-all">
+      <a href="/rounds">See all rounds →</a>
+    </div>
+  </section>
+  {% endif %}
 </main>
 
 <script>
