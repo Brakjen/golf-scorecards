@@ -24,6 +24,32 @@ body {
   font-family: var(--font-body);
 }
 
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 24px;
+  background: rgba(18, 26, 18, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.top-nav__home {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+
+.top-nav__home:hover {
+  color: var(--ink);
+}
+
 .page-shell {
   width: min(1120px, calc(100vw - 32px));
   margin: 0 auto;
