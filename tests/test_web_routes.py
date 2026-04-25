@@ -11,7 +11,9 @@ def test_home_page_renders_course_form() -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Generate a printable golf scorecard" in response.text
+    assert "Golf Scorecards" in response.text
+    assert "Generate Scorecard" in response.text
+    assert "Enter Round" in response.text
     assert "sola-golfklubb-forus" in response.text
     assert "Scoring mode" in response.text
     assert "Target score" in response.text
