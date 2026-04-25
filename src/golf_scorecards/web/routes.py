@@ -1,13 +1,17 @@
-"""FastAPI route handlers for scorecard creation, preview, and export."""
+"""FastAPI route handlers for scorecard creation, preview, export, and round entry."""
 
+import json
+from datetime import date
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from golf_scorecards.catalog.service import CatalogLookupError, CatalogService
 from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
+from golf_scorecards.rounds.models import RoundHole
+from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.scorecards.builder import ScorecardBuilder
 from golf_scorecards.scorecards.forms import ScorecardFormData, parse_scorecard_form
 from golf_scorecards.scorecards.models import PrintableScorecard
@@ -15,6 +19,7 @@ from golf_scorecards.web.dependencies import (
     get_catalog_service,
     get_export_service,
     get_handicap_service,
+    get_round_service,
     get_scorecard_builder,
     get_templates,
 )
@@ -148,3 +153,224 @@ async def scorecard_export_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Round entry routes ───────────────────────────────────────────────
+
+
+@router.get("/rounds/new", response_class=HTMLResponse)
+async def round_create_form(
+    request: Request,
+    catalog_service: CatalogService = Depends(get_catalog_service),
+) -> HTMLResponse:
+    """Render the round creation form (course and tee selection).
+
+    Args:
+        request: The incoming HTTP request.
+        catalog_service: Injected catalog service for course options.
+
+    Returns:
+        The rendered ``round_create.html`` template.
+    """
+    course_options = catalog_service.list_course_options()
+    initial_course = course_options[0]
+    initial_tee = initial_course["tees"][0]
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="round_create.html",
+            context={
+                "course_options": course_options,
+                "initial_course_slug": initial_course["course_slug"],
+                "initial_tee_name": initial_tee,
+            },
+        ),
+    )
+
+
+@router.post("/rounds")
+async def round_create(
+    course_slug: str = Form(),
+    tee_name: str = Form(),
+    player_name: str = Form(default=""),
+    round_date: str = Form(default=""),
+    catalog_service: CatalogService = Depends(get_catalog_service),
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Create a new round and redirect to the entry form.
+
+    Looks up the course and tee from the catalog, creates a round with
+    a course snapshot and empty hole rows, then redirects to the
+    spreadsheet entry page.
+
+    Args:
+        course_slug: URL-safe course identifier from the form.
+        tee_name: Selected tee name from the form.
+        player_name: Optional player name.
+        round_date: Optional ISO date string.
+        catalog_service: Injected catalog service.
+        round_service: Injected round service.
+
+    Returns:
+        A redirect to ``GET /rounds/{id}/edit``.
+
+    Raises:
+        HTTPException: 404 if the course or tee is not found.
+    """
+    try:
+        course = catalog_service.get_course(course_slug)
+        tee = catalog_service.get_tee(course_slug, tee_name)
+    except CatalogLookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    parsed_date = date.fromisoformat(round_date) if round_date else date.today()
+    parsed_name = player_name.strip() or None
+
+    r = await round_service.create_round(
+        course=course,
+        tee=tee,
+        round_date=parsed_date,
+        player_name=parsed_name,
+    )
+    return RedirectResponse(url=f"/rounds/{r.id}/edit", status_code=303)
+
+
+@router.get("/rounds/{round_id}/edit", response_class=HTMLResponse)
+async def round_entry_form(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> HTMLResponse:
+    """Render the spreadsheet-style hole entry form for an existing round.
+
+    Args:
+        request: The incoming HTTP request.
+        round_id: The unique round identifier from the URL path.
+        round_service: Injected round service.
+
+    Returns:
+        The rendered ``round_entry.html`` template.
+
+    Raises:
+        HTTPException: 404 if the round does not exist.
+    """
+    try:
+        r = await round_service.get_round(round_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    snapshot = json.loads(r.course_snapshot)
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="round_entry.html",
+            context={"round": r, "snapshot": snapshot},
+        ),
+    )
+
+
+@router.post("/rounds/{round_id}")
+async def round_save(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Save hole-by-hole metric data from the entry form.
+
+    Parses the flat form fields (``score_1``, ``putts_1``, ``fir_1``, etc.)
+    into ``RoundHole`` updates and persists them. Checkbox fields are
+    treated as ``1`` when present and ``None`` when absent.
+
+    Args:
+        request: The incoming HTTP request (used to read form data).
+        round_id: The unique round identifier from the URL path.
+        round_service: Injected round service.
+
+    Returns:
+        A redirect back to ``GET /rounds/{id}/edit`` after saving.
+
+    Raises:
+        HTTPException: 404 if the round does not exist.
+    """
+    try:
+        r = await round_service.get_round(round_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    form = await request.form()
+
+    holes: list[RoundHole] = []
+    for h in r.holes:
+        n = h.hole_number
+
+        def _int(field: str) -> int | None:
+            """Parse a form field as an optional integer.
+
+            Args:
+                field: The form field name.
+
+            Returns:
+                The parsed integer, or ``None`` if the field is blank.
+            """
+            val = str(form.get(field, "") or "").strip()
+            return int(val) if val else None
+
+        def _check(field: str) -> int | None:
+            """Parse a checkbox form field as 1 (present) or None (absent).
+
+            Args:
+                field: The form field name.
+
+            Returns:
+                ``1`` if the checkbox was checked, ``None`` otherwise.
+            """
+            return 1 if form.get(field) else None
+
+        def _str(field: str) -> str | None:
+            """Parse a form field as an optional string.
+
+            Args:
+                field: The form field name.
+
+            Returns:
+                The stripped string, or ``None`` if blank.
+            """
+            val = str(form.get(field, "") or "").strip()
+            return val if val else None
+
+        holes.append(
+            RoundHole(
+                id=h.id,
+                round_id=h.round_id,
+                hole_number=n,
+                par=h.par,
+                distance=h.distance,
+                handicap=h.handicap,
+                score=_int(f"score_{n}"),
+                putts=_int(f"putts_{n}"),
+                fir=_check(f"fir_{n}"),
+                gir=_check(f"gir_{n}"),
+                penalty_strokes=_int(f"penalty_{n}"),
+                miss_direction=_str(f"miss_{n}"),
+                up_and_down=_check(f"ud_{n}"),
+                sand_save=_check(f"sand_{n}"),
+                sz_in_reg=_check(f"sz_{n}"),
+                down_in_3=_check(f"d3_{n}"),
+                putt_under_4ft=_check(f"putt4_{n}"),
+                made_over_4ft=_check(f"made4_{n}"),
+                notes=_str(f"notes_{n}"),
+            )
+        )
+
+    await round_service.save_holes(round_id, holes)
+    return RedirectResponse(url=f"/rounds/{round_id}/edit", status_code=303)
