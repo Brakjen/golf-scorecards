@@ -8,9 +8,12 @@ from starlette.templating import Jinja2Templates
 
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
+from golf_scorecards.config import get_settings
 from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.repository import SlopeRatingsRepository
 from golf_scorecards.handicap.service import HandicapService
+from golf_scorecards.rounds.repository import RoundRepository
+from golf_scorecards.rounds.service import RoundService
 from golf_scorecards.scorecards.builder import ScorecardBuilder
 
 
@@ -54,3 +57,15 @@ def get_templates() -> Jinja2Templates:
 def get_export_service() -> ExportService:
     """Return the singleton PDF export service."""
     return ExportService(template_dir=Path(get_templates_directory()))
+
+
+@lru_cache(maxsize=1)
+def get_round_service() -> RoundService:
+    """Return the singleton round service.
+
+    Returns:
+        A ``RoundService`` backed by a ``RoundRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return RoundService(repository=RoundRepository(db_path=settings.db_path))

@@ -7,14 +7,17 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from golf_scorecards.config import get_settings
+from golf_scorecards.db.connection import init_db_sync
 from golf_scorecards.web.dependencies import get_catalog_service, get_static_directory
 from golf_scorecards.web.routes import router as web_router
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Pre-load the course catalog on startup."""
+    """Pre-load the course catalog and initialise the database on startup."""
     get_catalog_service()
+    settings = get_settings()
+    init_db_sync(settings.db_path)
     yield
 
 
