@@ -699,6 +699,21 @@ tfoot th {
   color: var(--ink);
 }
 
+.stat-pill--blue {
+  background: #3b82c8;
+  color: #fff;
+}
+
+.stat-pill--good {
+  background: rgba(78, 173, 122, 0.25);
+  color: #6fd99a;
+}
+
+.stat-pill--bad {
+  background: rgba(224, 85, 85, 0.25);
+  color: #e07070;
+}
+
 .empty-state {
   text-align: center;
   padding: 48px 16px;
