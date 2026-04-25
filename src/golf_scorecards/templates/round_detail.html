@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Round — {{ snapshot.course_name }} ({{ snapshot.tee_name }}){% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide">
+  <div class="detail-header">
+    <div>
+      <h1>{{ snapshot.club_name }} — {{ snapshot.course_name }}</h1>
+      <p class="entry-meta">
+        Tee {{ snapshot.tee_name }}
+        {% if round.player_name %} · {{ round.player_name }}{% endif %}
+        · {{ round.round_date.isoformat() }}
+      </p>
+    </div>
+    <div class="detail-actions">
+      <a href="/rounds/{{ round.id }}/edit" class="btn-primary">Edit scores</a>
+      <form method="post" action="/rounds/{{ round.id }}/delete" class="inline-form"
+            onsubmit="return confirm('Delete this round? This cannot be undone.')">
+        <button type="submit" class="btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  {% if stats.total_score is not none %}
+  <div class="stat-bar">
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.total_score }}</span>
+      <span class="stat-block__label">Score</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">
+        {% if stats.score_vs_par is not none %}
+          {% if stats.score_vs_par > 0 %}+{% endif %}{{ stats.score_vs_par }}
+        {% else %}—{% endif %}
+      </span>
+      <span class="stat-block__label">vs Par</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.total_putts }}</span>
+      <span class="stat-block__label">Putts</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.gir_count }}/{{ stats.gir_total }}</span>
+      <span class="stat-block__label">GIR</span>
+    </div>
+    {% if stats.fir_total > 0 %}
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.fir_count }}/{{ stats.fir_total }}</span>
+      <span class="stat-block__label">FIR</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="entry-grid-wrapper">
+    <table class="entry-grid detail-grid">
+      <thead>
+        <tr>
+          <th class="col-hole">Hole</th>
+          <th class="col-par">Par</th>
+          <th class="col-dist">Dist</th>
+          <th class="col-hcp">HCP</th>
+          <th class="col-score">Score</th>
+          <th class="col-putts">Putts</th>
+          <th class="col-check">FIR</th>
+          <th class="col-check">GIR</th>
+          <th class="col-pen">Pen</th>
+          <th class="col-miss">Miss</th>
+          <th class="col-check">U&D</th>
+          <th class="col-check">Sand</th>
+          <th class="col-check">SZ</th>
+          <th class="col-check">D3</th>
+          <th class="col-check">≤4ft</th>
+          <th class="col-check">>4ft</th>
+          <th class="col-notes">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hole in round.holes %}
+        {% if hole.hole_number == 10 %}
+        <tr class="turn-row">
+          <td colspan="17">Turn</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td class="cell-fixed">{{ hole.hole_number }}</td>
+          <td class="cell-fixed">{{ hole.par }}</td>
+          <td class="cell-fixed">{{ hole.distance }}</td>
+          <td class="cell-fixed">{{ hole.handicap }}</td>
+          <td class="cell-value{% if hole.score is not none and hole.score < hole.par %} cell-birdie{% elif hole.score is not none and hole.score > hole.par %} cell-bogey{% endif %}">
+            {{ hole.score if hole.score is not none else '—' }}
+          </td>
+          <td class="cell-value">{{ hole.putts if hole.putts is not none else '—' }}</td>
+          <td class="cell-value">
+            {% if hole.par > 3 %}
+              {% if hole.fir == 1 %}✓{% elif hole.fir == 0 %}✗{% else %}—{% endif %}
+            {% else %}
+              <span class="na">—</span>
+            {% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.gir == 1 %}✓{% elif hole.gir == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">{{ hole.penalty_strokes if hole.penalty_strokes is not none else '—' }}</td>
+          <td class="cell-value">{{ hole.miss_direction if hole.miss_direction else '—' }}</td>
+          <td class="cell-value">
+            {% if hole.up_and_down == 1 %}✓{% elif hole.up_and_down == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.sand_save == 1 %}✓{% elif hole.sand_save == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.sz_in_reg == 1 %}✓{% elif hole.sz_in_reg == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.down_in_3 == 1 %}✓{% elif hole.down_in_3 == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.putt_under_4ft == 1 %}✓{% elif hole.putt_under_4ft == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.made_over_4ft == 1 %}✓{% elif hole.made_over_4ft == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value cell-notes-text">{{ hole.notes if hole.notes else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="totals-row">
+          <td class="cell-fixed">Tot</td>
+          <td class="cell-fixed">{{ round.holes | map(attribute='par') | sum }}</td>
+          <td class="cell-fixed">{{ round.holes | map(attribute='distance') | sum }}</td>
+          <td></td>
+          <td class="cell-value">{{ stats.total_score if stats.total_score is not none else '—' }}</td>
+          <td class="cell-value">{{ stats.total_putts if stats.total_putts else '—' }}</td>
+          <td class="cell-value">{% if stats.fir_total > 0 %}{{ stats.fir_count }}/{{ stats.fir_total }}{% endif %}</td>
+          <td class="cell-value">{% if stats.gir_total > 0 %}{{ stats.gir_count }}/{{ stats.gir_total }}{% endif %}</td>
+          <td colspan="9"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="back-link">
+    <a href="/rounds">← All rounds</a>
+  </div>
+</main>
+{% endblock %}

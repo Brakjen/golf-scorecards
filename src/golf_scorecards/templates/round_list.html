@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Round History{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <div class="list-header">
+    <h1>Round history</h1>
+    <a href="/rounds/new" class="btn-primary">+ New round</a>
+  </div>
+
+  {% if rounds %}
+  <div class="round-list">
+    {% for r in rounds %}
+    <a href="/rounds/{{ r.id }}" class="round-card">
+      <div class="round-card__date">{{ r.round_date.strftime('%b %d, %Y') }}</div>
+      <div class="round-card__course">
+        {{ r.course_slug | replace('-', ' ') | title }}
+        <span class="round-card__tee">({{ r.tee_name }})</span>
+      </div>
+      {% if r.player_name %}
+      <div class="round-card__player">{{ r.player_name }}</div>
+      {% endif %}
+      <div class="round-card__stats">
+        {% if r.total_score is not none %}
+        <span class="stat-pill">{{ r.total_score }}</span>
+        {% endif %}
+        {% if r.total_putts is not none %}
+        <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
+        {% endif %}
+        {% if r.gir_total and r.gir_total > 0 %}
+        <span class="stat-pill stat-pill--muted">GIR {{ r.gir_count }}/{{ r.gir_total }}</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No rounds recorded yet.</p>
+    <a href="/rounds/new" class="btn-primary">Enter your first round</a>
+  </div>
+  {% endif %}
+
+  <div class="back-link">
+    <a href="/">← Back to home</a>
+  </div>
+</main>
+{% endblock %}
