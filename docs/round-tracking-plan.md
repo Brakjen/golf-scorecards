@@ -12,6 +12,14 @@ The workflow is:
 
 Everything stays Python (FastAPI + Jinja2 + SQLite). No JS framework.
 
+## Code Conventions
+
+- All Python docstrings use **Google style** with `Args:`, `Returns:`, `Raises:`,
+  and `Attributes:` sections as appropriate.
+- All function arguments and return types must be annotated in the docstring.
+- Exceptions raised must be documented in a `Raises:` section.
+- Include additional documentation about non-obvious logic when necessary.
+
 ---
 
 ## Architecture
