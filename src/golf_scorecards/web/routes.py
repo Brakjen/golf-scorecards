@@ -16,12 +16,14 @@ from golf_scorecards.rounds.stats import compute_quick_stats
 from golf_scorecards.scorecards.builder import ScorecardBuilder
 from golf_scorecards.scorecards.forms import ScorecardFormData, parse_scorecard_form
 from golf_scorecards.scorecards.models import PrintableScorecard
+from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
     get_catalog_service,
     get_export_service,
     get_handicap_service,
     get_round_service,
     get_scorecard_builder,
+    get_settings_repo,
     get_templates,
 )
 
@@ -88,6 +90,7 @@ async def home(
     request: Request,
     catalog_service: CatalogService = Depends(get_catalog_service),
     round_service: RoundService = Depends(get_round_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse:
     """Render the landing page with action cards, quick stats, and recent rounds.
 
@@ -95,6 +98,7 @@ async def home(
         request: The incoming HTTP request.
         catalog_service: Injected catalog service for course options.
         round_service: Injected round service for recent rounds and stats.
+        settings_repo: Injected settings repository for handicap index.
 
     Returns:
         The rendered ``home.html`` template.
@@ -105,6 +109,8 @@ async def home(
 
     summaries = await round_service.list_rounds()
     recent = summaries[:3]
+
+    handicap_index = await settings_repo.get("handicap_index")
 
     # Load full round data for the last 5 rounds to compute quick stats
     stats = None
@@ -130,9 +136,30 @@ async def home(
                 "initial_tee_name": initial_tee,
                 "recent_rounds": recent,
                 "stats": stats,
+                "handicap_index": handicap_index,
             },
         ),
     )
+
+
+@router.post("/settings/handicap")
+async def update_handicap_index(
+    handicap_index: str = Form(default=""),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> RedirectResponse:
+    """Update the player's stored handicap index.
+
+    Args:
+        handicap_index: The new handicap index value from the form.
+        settings_repo: Injected settings repository.
+
+    Returns:
+        A redirect back to the landing page.
+    """
+    value = handicap_index.strip()
+    if value:
+        await settings_repo.set("handicap_index", value)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.post("/scorecards/preview", response_class=HTMLResponse)
@@ -227,12 +254,14 @@ async def round_create(
     round_date: str = Form(default=""),
     catalog_service: CatalogService = Depends(get_catalog_service),
     round_service: RoundService = Depends(get_round_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> RedirectResponse:
     """Create a new round and redirect to the entry form.
 
     Looks up the course and tee from the catalog, creates a round with
     a course snapshot and empty hole rows, then redirects to the
-    spreadsheet entry page.
+    spreadsheet entry page. The player's stored handicap index is
+    automatically attached to the round.
 
     Args:
         course_slug: URL-safe course identifier from the form.
@@ -241,6 +270,7 @@ async def round_create(
         round_date: Optional ISO date string.
         catalog_service: Injected catalog service.
         round_service: Injected round service.
+        settings_repo: Injected settings repository for handicap index.
 
     Returns:
         A redirect to ``GET /rounds/{id}/edit``.
@@ -259,11 +289,15 @@ async def round_create(
     parsed_date = date.fromisoformat(round_date) if round_date else date.today()
     parsed_name = player_name.strip() or None
 
+    hci_raw = await settings_repo.get("handicap_index")
+    hci = float(hci_raw) if hci_raw else None
+
     r = await round_service.create_round(
         course=course,
         tee=tee,
         round_date=parsed_date,
         player_name=parsed_name,
+        handicap_index=hci,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/edit", status_code=303)
 

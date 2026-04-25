@@ -45,3 +45,8 @@ CREATE TABLE IF NOT EXISTS insights_cache (
     rounds_hash     TEXT NOT NULL,
     insights_json   TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);

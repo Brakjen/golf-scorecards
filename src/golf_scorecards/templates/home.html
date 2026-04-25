@@ -4,7 +4,21 @@
 
 {% block body %}
 <main class="page-shell">
-  <h1 class="landing-title">Golf Scorecards</h1>
+  <div class="landing-top">
+    <h1 class="landing-title">Golf Scorecards</h1>
+    <div class="hci-badge">
+      <form method="post" action="/settings/handicap" class="hci-form">
+        <label class="hci-label">
+          <span class="hci-label__text">HCI</span>
+          <input type="text" name="handicap_index" inputmode="decimal"
+                 value="{{ handicap_index if handicap_index else '' }}"
+                 placeholder="—"
+                 class="hci-input">
+        </label>
+        <button type="submit" class="hci-save">Update</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ── Action cards ──────────────────────────────────── -->
   <div class="action-cards">

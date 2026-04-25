@@ -30,9 +30,11 @@ from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.db.connection import init_db_sync
 from golf_scorecards.rounds.repository import RoundRepository
 from golf_scorecards.rounds.service import RoundService
+from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
     get_catalog_service,
     get_round_service,
+    get_settings_repo,
 )
 from golf_scorecards.web.routes import router
 
@@ -51,12 +53,14 @@ def _make_test_app(db_path: str) -> FastAPI:
     """
     catalog_service = CatalogService(repository=CourseCatalogRepository())
     round_service = RoundService(repository=RoundRepository(db_path=db_path))
+    settings_repo = SettingsRepository(db_path=db_path)
     static_dir = str(files("golf_scorecards").joinpath("static"))
 
     app = FastAPI()
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
     app.dependency_overrides[get_catalog_service] = lambda: catalog_service
     app.dependency_overrides[get_round_service] = lambda: round_service
+    app.dependency_overrides[get_settings_repo] = lambda: settings_repo
     app.include_router(router)
 
     return app

@@ -845,11 +845,82 @@ tfoot th {
 
 /* ── Landing page ──────────────────────────────────────────────────── */
 
+.landing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
 .landing-title {
-  margin: 0 0 28px;
+  margin: 0;
   font-family: var(--font-heading);
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 1;
+}
+
+.hci-badge {
+  flex-shrink: 0;
+}
+
+.hci-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hci-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.hci-label__text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.hci-input {
+  width: 56px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+
+.hci-input::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.hci-save {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.hci-save:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .action-cards {

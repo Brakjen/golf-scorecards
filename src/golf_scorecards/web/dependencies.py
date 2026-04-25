@@ -15,6 +15,7 @@ from golf_scorecards.handicap.service import HandicapService
 from golf_scorecards.rounds.repository import RoundRepository
 from golf_scorecards.rounds.service import RoundService
 from golf_scorecards.scorecards.builder import ScorecardBuilder
+from golf_scorecards.settings_repo import SettingsRepository
 
 
 def get_templates_directory() -> str:
@@ -69,3 +70,15 @@ def get_round_service() -> RoundService:
     """
     settings = get_settings()
     return RoundService(repository=RoundRepository(db_path=settings.db_path))
+
+
+@lru_cache(maxsize=1)
+def get_settings_repo() -> SettingsRepository:
+    """Return the singleton settings repository.
+
+    Returns:
+        A ``SettingsRepository`` configured with the database path
+        from application settings.
+    """
+    settings = get_settings()
+    return SettingsRepository(db_path=settings.db_path)
