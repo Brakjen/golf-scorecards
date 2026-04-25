@@ -120,6 +120,9 @@ class RoundSummary(BaseModel):
         total_putts: Sum of putts across all entered holes.
         gir_count: Number of greens hit in regulation.
         gir_total: Number of holes with GIR data entered.
+        ud_count: Number of successful up-and-downs.
+        d3_count: Number of successful down-in-3 conversions.
+        three_putt_count: Number of holes with 3 or more putts.
         created_at: Timestamp when the round was created.
     """
 
@@ -135,4 +138,7 @@ class RoundSummary(BaseModel):
     total_putts: int | None = None
     gir_count: int | None = None
     gir_total: int | None = None
+    ud_count: int | None = None
+    d3_count: int | None = None
+    three_putt_count: int | None = None
     created_at: datetime

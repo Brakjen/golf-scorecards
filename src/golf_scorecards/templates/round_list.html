@@ -31,6 +31,15 @@
         {% if r.gir_total and r.gir_total > 0 %}
         <span class="stat-pill stat-pill--muted">GIR {{ r.gir_count }}/{{ r.gir_total }}</span>
         {% endif %}
+        {% if r.ud_count %}
+        <span class="stat-pill stat-pill--muted">U&D {{ r.ud_count }}</span>
+        {% endif %}
+        {% if r.d3_count %}
+        <span class="stat-pill stat-pill--muted">D3 {{ r.d3_count }}</span>
+        {% endif %}
+        {% if r.three_putt_count %}
+        <span class="stat-pill stat-pill--muted">3putt {{ r.three_putt_count }}</span>
+        {% endif %}
       </div>
     </a>
     {% endfor %}

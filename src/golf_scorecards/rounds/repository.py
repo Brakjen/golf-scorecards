@@ -114,7 +114,13 @@ class RoundRepository:
                     (SELECT SUM(rh.gir) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.gir IS NOT NULL) AS gir_count,
                     (SELECT COUNT(*) FROM round_holes rh
-                     WHERE rh.round_id = r.id AND rh.gir IS NOT NULL) AS gir_total
+                     WHERE rh.round_id = r.id AND rh.gir IS NOT NULL) AS gir_total,
+                    (SELECT SUM(rh.up_and_down) FROM round_holes rh
+                     WHERE rh.round_id = r.id AND rh.up_and_down IS NOT NULL) AS ud_count,
+                    (SELECT SUM(rh.down_in_3) FROM round_holes rh
+                     WHERE rh.round_id = r.id AND rh.down_in_3 IS NOT NULL) AS d3_count,
+                    (SELECT COUNT(*) FROM round_holes rh
+                     WHERE rh.round_id = r.id AND rh.putts >= 3) AS three_putt_count
                 FROM rounds r ORDER BY r.round_date DESC, r.created_at DESC""",
             )
             rows = await cursor.fetchall()
@@ -132,6 +138,9 @@ class RoundRepository:
                     total_putts=row["total_putts"],
                     gir_count=row["gir_count"],
                     gir_total=row["gir_total"],
+                    ud_count=row["ud_count"],
+                    d3_count=row["d3_count"],
+                    three_putt_count=row["three_putt_count"],
                     created_at=datetime.fromisoformat(row["created_at"]),
                 )
                 for row in rows
