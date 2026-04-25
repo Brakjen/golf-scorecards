@@ -371,3 +371,52 @@ def test_round_delete_not_found(client: TestClient) -> None:
     """POST /rounds/{id}/delete should return 404 for unknown round ID."""
     response = client.post("/rounds/nonexistent/delete")
     assert response.status_code == 404
+
+
+def test_round_create_front_9(client: TestClient) -> None:
+    """POST /rounds with holes_played=front_9 should create a 9-hole round."""
+    create_response = client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "player_name": "Nine Holer",
+            "round_date": "2026-04-25",
+            "holes_played": "front_9",
+        },
+        follow_redirects=False,
+    )
+    assert create_response.status_code == 303
+    edit_url = create_response.headers["location"]
+
+    # Entry form should only show holes 1–9
+    entry_response = client.get(edit_url)
+    assert entry_response.status_code == 200
+    assert "score_1" in entry_response.text
+    assert "score_9" in entry_response.text
+    assert "score_10" not in entry_response.text
+    assert "Front 9" in entry_response.text
+
+
+def test_round_create_back_9(client: TestClient) -> None:
+    """POST /rounds with holes_played=back_9 should create a back-9 round."""
+    create_response = client.post(
+        "/rounds",
+        data={
+            "course_slug": "sola-golfklubb-forus",
+            "tee_name": "58",
+            "round_date": "2026-04-25",
+            "holes_played": "back_9",
+        },
+        follow_redirects=False,
+    )
+    assert create_response.status_code == 303
+    edit_url = create_response.headers["location"]
+
+    entry_response = client.get(edit_url)
+    assert entry_response.status_code == 200
+    assert "score_10" in entry_response.text
+    assert "score_18" in entry_response.text
+    assert 'name="score_1"' not in entry_response.text
+    assert 'name="score_9"' not in entry_response.text
+    assert "Back 9" in entry_response.text

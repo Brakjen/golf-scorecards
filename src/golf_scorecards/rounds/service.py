@@ -41,6 +41,7 @@ class RoundService:
         slope_rating: int | None = None,
         scoring_mode: str = "stroke",
         target_score: int | None = None,
+        holes_played: str = "18",
     ) -> Round:
         """Create a new round with empty hole rows from the course snapshot.
 
@@ -61,6 +62,7 @@ class RoundService:
             slope_rating: Slope rating for the selected tee and profile.
             scoring_mode: Scoring format ("stroke" or "stableford").
             target_score: Optional target score for stroke play.
+            holes_played: Which holes to include ("18", "front_9", or "back_9").
 
         Returns:
             The newly created ``Round`` with its empty hole rows.
@@ -88,6 +90,12 @@ class RoundService:
             },
         )
 
+        tee_holes = tee.holes
+        if holes_played == "front_9":
+            tee_holes = [h for h in tee_holes if h.hole_number <= 9]
+        elif holes_played == "back_9":
+            tee_holes = [h for h in tee_holes if h.hole_number >= 10]
+
         holes = [
             RoundHole(
                 id=uuid.uuid4().hex,
@@ -97,7 +105,7 @@ class RoundService:
                 distance=h.distance,
                 handicap=h.handicap,
             )
-            for h in tee.holes
+            for h in tee_holes
         ]
 
         r = Round(
@@ -113,6 +121,7 @@ class RoundService:
             slope_rating=slope_rating,
             scoring_mode=scoring_mode,
             target_score=target_score,
+            holes_played=holes_played,
             course_snapshot=snapshot,
             created_at=now,
             updated_at=now,

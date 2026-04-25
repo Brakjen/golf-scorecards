@@ -23,6 +23,9 @@ def init_db_sync(db_path: str) -> None:
     bundled ``schema.sql`` against the database. Safe to call repeatedly
     because all statements use ``CREATE TABLE IF NOT EXISTS``.
 
+    After creating tables, applies lightweight migrations for columns
+    added after initial release.
+
     Args:
         db_path: Filesystem path to the SQLite database file.
     """
@@ -30,8 +33,29 @@ def init_db_sync(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
     try:
         conn.executescript(_schema_sql())
+        _migrate(conn)
     finally:
         conn.close()
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Apply additive column migrations to an existing database.
+
+    Each migration checks whether the target column already exists
+    before issuing ``ALTER TABLE``, making this safe to call on every
+    startup.
+
+    Args:
+        conn: An open synchronous SQLite connection.
+    """
+    existing = {
+        row[1] for row in conn.execute("PRAGMA table_info(rounds)").fetchall()
+    }
+    if "holes_played" not in existing:
+        conn.execute(
+            "ALTER TABLE rounds ADD COLUMN holes_played TEXT NOT NULL DEFAULT '18'"
+        )
+        conn.commit()
 
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:

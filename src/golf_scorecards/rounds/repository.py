@@ -48,14 +48,14 @@ class RoundRepository:
                     id, course_slug, tee_name, player_name, round_date,
                     handicap_index, handicap_profile, playing_handicap,
                     course_rating, slope_rating, scoring_mode, target_score,
-                    course_snapshot, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    holes_played, course_snapshot, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r.id, r.course_slug, r.tee_name, r.player_name,
                     r.round_date.isoformat(), r.handicap_index,
                     r.handicap_profile, r.playing_handicap,
                     r.course_rating, r.slope_rating, r.scoring_mode,
-                    r.target_score, r.course_snapshot,
+                    r.target_score, r.holes_played, r.course_snapshot,
                     r.created_at.isoformat(), r.updated_at.isoformat(),
                 ),
             )
@@ -134,6 +134,7 @@ class RoundRepository:
                     handicap_index=row["handicap_index"],
                     playing_handicap=row["playing_handicap"],
                     scoring_mode=row["scoring_mode"],
+                    holes_played=row["holes_played"],
                     total_score=row["total_score"],
                     total_putts=row["total_putts"],
                     gir_count=row["gir_count"],
@@ -278,6 +279,7 @@ class RoundRepository:
             slope_rating=row["slope_rating"],
             scoring_mode=row["scoring_mode"],
             target_score=row["target_score"],
+            holes_played=row["holes_played"],
             course_snapshot=row["course_snapshot"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),

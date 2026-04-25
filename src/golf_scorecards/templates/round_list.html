@@ -17,6 +17,9 @@
       <div class="round-card__course">
         {{ r.course_slug | replace('-', ' ') | title }}
         <span class="round-card__tee">({{ r.tee_name }})</span>
+        {% if r.holes_played != '18' %}
+        <span class="holes-badge">{{ 'F9' if r.holes_played == 'front_9' else 'B9' }}</span>
+        {% endif %}
       </div>
       {% if r.player_name %}
       <div class="round-card__player">{{ r.player_name }}</div>

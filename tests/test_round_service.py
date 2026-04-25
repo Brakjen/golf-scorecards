@@ -190,3 +190,43 @@ def test_delete_round_not_found(round_service: RoundService) -> None:
         asyncio.get_event_loop().run_until_complete(
             round_service.delete_round("nonexistent")
         )
+
+
+def test_create_front_9_round(
+    round_service: RoundService, catalog_service: CatalogService,
+) -> None:
+    """A front-9 round should have only holes 1–9."""
+    course = catalog_service.get_course("sola-golfklubb-forus")
+    tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
+
+    r = asyncio.get_event_loop().run_until_complete(
+        round_service.create_round(
+            course=course, tee=tee, round_date=date(2026, 4, 25),
+            holes_played="front_9",
+        )
+    )
+
+    assert r.holes_played == "front_9"
+    assert len(r.holes) == 9
+    assert r.holes[0].hole_number == 1
+    assert r.holes[-1].hole_number == 9
+
+
+def test_create_back_9_round(
+    round_service: RoundService, catalog_service: CatalogService,
+) -> None:
+    """A back-9 round should have only holes 10–18."""
+    course = catalog_service.get_course("sola-golfklubb-forus")
+    tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
+
+    r = asyncio.get_event_loop().run_until_complete(
+        round_service.create_round(
+            course=course, tee=tee, round_date=date(2026, 4, 25),
+            holes_played="back_9",
+        )
+    )
+
+    assert r.holes_played == "back_9"
+    assert len(r.holes) == 9
+    assert r.holes[0].hole_number == 10
+    assert r.holes[-1].hole_number == 18

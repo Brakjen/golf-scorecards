@@ -76,6 +76,7 @@ class Round(BaseModel):
         slope_rating: Slope rating for the selected tee and profile.
         scoring_mode: Scoring format ("stroke" or "stableford").
         target_score: Optional target score for stroke play.
+        holes_played: Which holes were played ("18", "front_9", or "back_9").
         course_snapshot: JSON blob capturing course/tee/hole data at creation.
         created_at: Timestamp when the round was created.
         updated_at: Timestamp of the most recent hole data save.
@@ -94,6 +95,7 @@ class Round(BaseModel):
     slope_rating: int | None = None
     scoring_mode: str = "stroke"
     target_score: int | None = None
+    holes_played: str = "18"
     course_snapshot: str
     created_at: datetime
     updated_at: datetime
@@ -116,6 +118,7 @@ class RoundSummary(BaseModel):
         handicap_index: Player's handicap index at time of play.
         playing_handicap: Computed playing handicap for this tee.
         scoring_mode: Scoring format ("stroke" or "stableford").
+        holes_played: Which holes were played ("18", "front_9", or "back_9").
         total_score: Sum of gross scores across all entered holes.
         total_putts: Sum of putts across all entered holes.
         gir_count: Number of greens hit in regulation.
@@ -134,6 +137,7 @@ class RoundSummary(BaseModel):
     handicap_index: float | None = None
     playing_handicap: int | None = None
     scoring_mode: str
+    holes_played: str = "18"
     total_score: int | None = None
     total_putts: int | None = None
     gir_count: int | None = None

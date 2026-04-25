@@ -252,6 +252,7 @@ async def round_create(
     tee_name: str = Form(),
     player_name: str = Form(default=""),
     round_date: str = Form(default=""),
+    holes_played: str = Form(default="18"),
     catalog_service: CatalogService = Depends(get_catalog_service),
     round_service: RoundService = Depends(get_round_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
@@ -268,6 +269,7 @@ async def round_create(
         tee_name: Selected tee name from the form.
         player_name: Optional player name.
         round_date: Optional ISO date string.
+        holes_played: Which holes to play ("18", "front_9", or "back_9").
         catalog_service: Injected catalog service.
         round_service: Injected round service.
         settings_repo: Injected settings repository for handicap index.
@@ -292,12 +294,16 @@ async def round_create(
     hci_raw = await settings_repo.get("handicap_index")
     hci = float(hci_raw) if hci_raw else None
 
+    valid_holes = {"18", "front_9", "back_9"}
+    hp = holes_played if holes_played in valid_holes else "18"
+
     r = await round_service.create_round(
         course=course,
         tee=tee,
         round_date=parsed_date,
         player_name=parsed_name,
         handicap_index=hci,
+        holes_played=hp,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/edit", status_code=303)
 

@@ -9,6 +9,9 @@
       <h1>{{ snapshot.club_name }} — {{ snapshot.course_name }}</h1>
       <p class="entry-meta">
         Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        <span class="holes-badge">{{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}</span>
+        {% endif %}
         {% if round.player_name %} · {{ round.player_name }}{% endif %}
         · {{ round.round_date.isoformat() }}
       </p>
@@ -78,7 +81,7 @@
       </thead>
       <tbody>
         {% for hole in round.holes %}
-        {% if hole.hole_number == 10 %}
+        {% if hole.hole_number == 10 and round.holes_played == '18' %}
         <tr class="turn-row">
           <td colspan="17">Turn</td>
         </tr>

@@ -102,6 +102,18 @@
           <input type="hidden" id="round-tee-hidden" name="tee_name" value="">
         </div>
 
+        <div class="field-group">
+          <span>Holes</span>
+          <div id="round-holes-segmented" class="segmented-control">
+            <input type="radio" name="holes_played" id="hp-18" value="18" checked>
+            <label for="hp-18">18</label>
+            <input type="radio" name="holes_played" id="hp-front" value="front_9">
+            <label for="hp-front">Front 9</label>
+            <input type="radio" name="holes_played" id="hp-back" value="back_9">
+            <label for="hp-back">Back 9</label>
+          </div>
+        </div>
+
         <button type="submit" id="round-submit-btn" disabled>Start entering scores</button>
       </form>
       {% if recent_rounds %}
@@ -172,6 +184,9 @@
         <div class="round-card__course">
           {{ r.course_slug | replace('-', ' ') | title }}
           <span class="round-card__tee">({{ r.tee_name }})</span>
+          {% if r.holes_played != '18' %}
+          <span class="holes-badge">{{ 'F9' if r.holes_played == 'front_9' else 'B9' }}</span>
+          {% endif %}
         </div>
         {% if r.player_name %}
         <div class="round-card__player">{{ r.player_name }}</div>
