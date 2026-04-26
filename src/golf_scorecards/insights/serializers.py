@@ -6,17 +6,26 @@ from golf_scorecards.rounds.models import Round
 from golf_scorecards.rounds.stats import QuickStats
 
 
-def serialize_rounds(rounds: list[Round], stats: QuickStats) -> str:
+def serialize_rounds(
+    rounds: list[Round],
+    stats: QuickStats,
+    handicap_index: str | None = None,
+) -> str:
     """Convert recent rounds and aggregate stats into a prompt-ready string.
 
     Args:
         rounds: Recent rounds with full hole data, newest first.
         stats: Pre-computed aggregate stats across the rounds.
+        handicap_index: The player's current WHS handicap index.
 
     Returns:
         Formatted multi-line string suitable for the LLM user message.
     """
     lines: list[str] = []
+
+    # ── Player profile ───────────────────────────────────
+    if handicap_index is not None:
+        lines.append(f"Player handicap index (HCI): {handicap_index}")
 
     # ── Aggregate stats ──────────────────────────────────
     lines.append(f"Rounds analysed: {stats.rounds_count}")

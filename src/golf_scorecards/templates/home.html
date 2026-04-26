@@ -164,25 +164,14 @@
         <button type="submit" class="btn-refresh" title="Generate fresh insights">↻ Refresh</button>
       </form>
     </div>
-    <div class="insights-carousel" id="insights-carousel">
+    <div class="insights-grid">
       {% for insight in insights %}
-      <div class="insight-card {% if loop.first %}insight-card--active{% endif %}" data-index="{{ loop.index0 }}">
-        <span class="insight-number">{{ loop.index }}/{{ insights|length }}</span>
+      <div class="insight-card">
+        <span class="insight-number">{{ loop.index }}</span>
         <p class="insight-text">{{ insight }}</p>
       </div>
       {% endfor %}
     </div>
-    {% if insights|length > 1 %}
-    <div class="insights-nav">
-      <button type="button" class="insights-nav__btn" id="insights-prev">◄</button>
-      <span class="insights-nav__dots" id="insights-dots">
-        {% for insight in insights %}
-        <span class="dot {% if loop.first %}dot--active{% endif %}" data-index="{{ loop.index0 }}"></span>
-        {% endfor %}
-      </span>
-      <button type="button" class="insights-nav__btn" id="insights-next">►</button>
-    </div>
-    {% endif %}
   </section>
   {% elif insights is defined and not insights %}
   {% if stats and stats.rounds_count > 0 %}
@@ -443,31 +432,5 @@
   });
 
   updateRoundTeeOptions(roundCourseSelect.value);
-
-  // ── Insights carousel ──
-  (function() {
-    const carousel = document.getElementById("insights-carousel");
-    if (!carousel) return;
-    const cards = carousel.querySelectorAll(".insight-card");
-    if (cards.length <= 1) return;
-    const prev = document.getElementById("insights-prev");
-    const next = document.getElementById("insights-next");
-    const dots = document.querySelectorAll("#insights-dots .dot");
-    let current = 0;
-
-    function show(idx) {
-      cards[current].classList.remove("insight-card--active");
-      if (dots[current]) dots[current].classList.remove("dot--active");
-      current = (idx + cards.length) % cards.length;
-      cards[current].classList.add("insight-card--active");
-      if (dots[current]) dots[current].classList.add("dot--active");
-    }
-
-    prev.addEventListener("click", () => show(current - 1));
-    next.addEventListener("click", () => show(current + 1));
-    dots.forEach((dot) => {
-      dot.addEventListener("click", () => show(parseInt(dot.dataset.index)));
-    });
-  })();
 </script>
 {% endblock %}

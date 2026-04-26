@@ -1133,76 +1133,38 @@ tfoot th {
   border-color: var(--accent);
 }
 
-.insights-carousel {
-  position: relative;
-  min-height: 4rem;
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
 }
 
 .insight-card {
-  display: none;
-}
-
-.insight-card--active {
-  display: block;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 1rem;
 }
 
 .insight-number {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 0.75rem;
-  color: var(--muted);
-  margin-bottom: 0.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 .insight-text {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   line-height: 1.5;
   margin: 0;
   color: var(--ink);
-}
-
-.insights-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.insights-nav__btn {
-  background: none;
-  border: 1px solid var(--rule);
-  border-radius: 50%;
-  width: 2rem;
-  height: 2rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-
-.insights-nav__btn:hover {
-  background: var(--accent-soft);
-}
-
-.insights-nav__dots {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--rule);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.dot--active {
-  background: var(--accent);
 }
 
 .insights-empty {

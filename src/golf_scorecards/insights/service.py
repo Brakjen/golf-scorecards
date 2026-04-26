@@ -62,7 +62,11 @@ class InsightsService:
         finally:
             await conn.close()
 
-    async def generate_insights(self, rounds: list[Round]) -> list[str]:
+    async def generate_insights(
+        self,
+        rounds: list[Round],
+        handicap_index: str | None = None,
+    ) -> list[str]:
         """Generate fresh coaching insights from recent rounds.
 
         Checks the cache first — if the rounds haven't changed since the
@@ -71,6 +75,7 @@ class InsightsService:
 
         Args:
             rounds: Recent rounds with full hole data, newest first.
+            handicap_index: The player's current WHS handicap index.
 
         Returns:
             A list of 5 coaching insight strings.
@@ -90,7 +95,7 @@ class InsightsService:
 
         # Build prompt
         stats = compute_quick_stats(rounds)
-        round_data = serialize_rounds(rounds, stats)
+        round_data = serialize_rounds(rounds, stats, handicap_index)
         user_message = build_user_message(round_data)
 
         # Call OpenAI

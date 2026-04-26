@@ -669,6 +669,7 @@ async def round_delete(
 async def insights_refresh(
     round_service: RoundService = Depends(get_round_service),
     insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> RedirectResponse:
     """Generate fresh coaching insights from recent rounds.
 
@@ -712,5 +713,8 @@ async def insights_refresh(
             detail="No rounds with data found",
         )
 
-    await insights_service.generate_insights(rounds)
+    await insights_service.generate_insights(
+        rounds,
+        handicap_index=await settings_repo.get("handicap_index"),
+    )
     return RedirectResponse(url="/", status_code=303)
