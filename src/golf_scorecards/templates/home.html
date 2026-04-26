@@ -204,10 +204,12 @@
     <h2 class="section-title">Recent Rounds</h2>
     <div class="round-list">
       {% for r in recent_rounds %}
-      <a href="/rounds/{{ r.id }}" class="round-card">
+      <div class="round-card">
         <div class="round-card__date">{{ r.round_date.strftime('%b %d, %Y') }}</div>
         <div class="round-card__course">
-          {{ r.course_slug | replace('-', ' ') | title }}
+          <a href="/rounds/{{ r.id }}" class="round-card__link">
+            {{ r.course_slug | replace('-', ' ') | title }}
+          </a>
           <span class="round-card__tee">({{ r.tee_name }})</span>
           {% if r.holes_played != '18' %}
           <span class="holes-badge">{{ 'F9' if r.holes_played == 'front_9' else 'B9' }}</span>
@@ -233,7 +235,14 @@
           <span class="stat-pill stat-pill--bad">3putt {{ r.three_putt_count }}</span>
           {% endif %}
         </div>
-      </a>
+        <div class="round-card__actions">
+          <a href="/rounds/{{ r.id }}/edit" class="btn-action btn-action--edit">Edit</a>
+          <form method="post" action="/rounds/{{ r.id }}/delete" class="inline-form"
+                onsubmit="return confirm('Delete this round?')">
+            <button type="submit" class="btn-action btn-action--delete">Delete</button>
+          </form>
+        </div>
+      </div>
       {% endfor %}
     </div>
     <div class="see-all">

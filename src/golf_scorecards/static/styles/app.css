@@ -667,7 +667,6 @@ tfoot th {
 .round-card {
   display: grid;
   grid-template-columns: 120px 1fr auto;
-  grid-template-rows: auto auto;
   gap: 4px 16px;
   align-items: center;
   padding: 16px 20px;
@@ -710,6 +709,51 @@ tfoot th {
   display: flex;
   gap: 8px;
   justify-self: end;
+}
+
+.round-card__link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.round-card__link:hover {
+  text-decoration: underline;
+}
+
+.round-card__actions {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.btn-action {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-action:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.btn-action--delete {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.btn-action--delete:hover {
+  background: #fef2f2;
+  border-color: #f87171;
 }
 
 .stat-pill {
