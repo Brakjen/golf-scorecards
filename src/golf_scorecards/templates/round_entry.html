@@ -36,11 +36,7 @@
             <th class="col-putts">Putts</th>
             <th class="col-pen">NFS</th>
             <th class="col-pen">Pen</th>
-            <th class="col-check">FIR</th>
-            <th class="col-check">GIR</th>
             <th class="col-check">Sand</th>
-            <th class="col-check">≤4ft</th>
-            <th class="col-check">>4ft</th>
             <th class="col-notes">Notes</th>
           </tr>
         </thead>
@@ -48,7 +44,7 @@
           {% for hole in round.holes %}
           {% if hole.hole_number == 10 and round.holes_played == '18' %}
           <tr class="turn-row">
-            <td colspan="18">Turn</td>
+            <td colspan="14">Turn</td>
           </tr>
           {% endif %}
           <tr>
@@ -98,28 +94,8 @@
                      min="0" max="10" class="input-num input-pen">
             </td>
             <td>
-              {% if hole.par > 3 %}
-              <input type="checkbox" name="fir_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.fir %}checked{% endif %}>
-              {% else %}
-              <span class="na">—</span>
-              {% endif %}
-            </td>
-            <td>
-              <input type="checkbox" name="gir_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.gir %}checked{% endif %}>
-            </td>
-            <td>
               <input type="checkbox" name="sand_{{ hole.hole_number }}" value="1"
                      tabindex="0" {% if hole.sand_save %}checked{% endif %}>
-            </td>
-            <td>
-              <input type="checkbox" name="putt4_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.putt_under_4ft %}checked{% endif %}>
-            </td>
-            <td>
-              <input type="checkbox" name="made4_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.made_over_4ft %}checked{% endif %}>
             </td>
             <td>
               <textarea name="notes_{{ hole.hole_number }}"
@@ -143,10 +119,6 @@
             <th id="tot-putts">—</th>
             <th id="tot-nfs">—</th>
             <th id="tot-pen">—</th>
-            <th id="tot-fir">—</th>
-            <th id="tot-gir">—</th>
-            <th></th>
-            <th></th>
             <th></th>
             <th></th>
           </tr>
@@ -197,8 +169,6 @@
     document.getElementById("tot-putts").textContent = putts !== null ? putts : "—";
     document.getElementById("tot-nfs").textContent = nfs !== null ? nfs : "—";
     document.getElementById("tot-pen").textContent = pen !== null ? pen : "—";
-    document.getElementById("tot-fir").textContent = countChecked("fir_", 14);
-    document.getElementById("tot-gir").textContent = countChecked("gir_", 18);
     document.getElementById("tot-ud").textContent = countChecked("ud_", 18);
   }
 

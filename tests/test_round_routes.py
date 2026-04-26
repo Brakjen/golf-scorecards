@@ -159,7 +159,6 @@ def test_round_entry_form_renders(client: TestClient) -> None:
     assert "score_1" in response.text
     assert "score_18" in response.text
     assert "putts_1" in response.text
-    assert "gir_1" in response.text
     assert "Save round" in response.text
 
 
@@ -190,7 +189,6 @@ def test_round_save_persists_scores(client: TestClient, db_path: str) -> None:
     for i in range(1, 19):
         form_data[f"score_{i}"] = "4"
         form_data[f"putts_{i}"] = "2"
-        form_data[f"gir_{i}"] = "1"
 
     save_response = client.post(
         f"/rounds/{round_id}",
@@ -322,7 +320,6 @@ def test_round_detail_with_scores(client: TestClient) -> None:
     for i in range(1, 19):
         form_data[f"score_{i}"] = "4"
         form_data[f"putts_{i}"] = "2"
-        form_data[f"gir_{i}"] = "1"
     client.post(f"/rounds/{round_id}", data=form_data, follow_redirects=False)
 
     response = client.get(f"/rounds/{round_id}")
@@ -331,8 +328,6 @@ def test_round_detail_with_scores(client: TestClient) -> None:
     assert "72" in response.text
     # Total putts = 2 * 18 = 36
     assert "36" in response.text
-    # GIR 18/18
-    assert "18/18" in response.text
 
 
 def test_round_detail_not_found(client: TestClient) -> None:

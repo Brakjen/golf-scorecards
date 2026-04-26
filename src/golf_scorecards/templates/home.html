@@ -133,28 +133,10 @@
         <span class="stat-block__label">Avg Score</span>
       </div>
       {% endif %}
-      {% if stats.gir_pct is not none %}
-      <div class="stat-block">
-        <span class="stat-block__value">{{ stats.gir_pct }}%</span>
-        <span class="stat-block__label">GIR</span>
-      </div>
-      {% endif %}
-      {% if stats.fir_pct is not none %}
-      <div class="stat-block">
-        <span class="stat-block__value">{{ stats.fir_pct }}%</span>
-        <span class="stat-block__label">FIR</span>
-      </div>
-      {% endif %}
       {% if stats.avg_putts is not none %}
       <div class="stat-block">
         <span class="stat-block__value">{{ stats.avg_putts }}</span>
         <span class="stat-block__label">Putts / Round</span>
-      </div>
-      {% endif %}
-      {% if stats.putts_per_gir is not none %}
-      <div class="stat-block">
-        <span class="stat-block__value">{{ stats.putts_per_gir }}</span>
-        <span class="stat-block__label">Putts / GIR</span>
       </div>
       {% endif %}
       {% if stats.up_and_down_pct is not none %}
@@ -197,9 +179,6 @@
           {% endif %}
           {% if r.total_putts is not none %}
           <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
-          {% endif %}
-          {% if r.gir_total and r.gir_total > 0 %}
-          <span class="stat-pill stat-pill--good">GIR {{ r.gir_count }}/{{ r.gir_total }}</span>
           {% endif %}
           {% if r.ud_count %}
           <span class="stat-pill stat-pill--good">U&D {{ r.ud_count }}</span>

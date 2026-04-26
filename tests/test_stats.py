@@ -1,9 +1,9 @@
 """Tests for the stats computation module."""
 
-from golf_scorecards.rounds.models import Round, RoundHole
-from golf_scorecards.rounds.stats import QuickStats, compute_quick_stats
-
 from datetime import datetime
+
+from golf_scorecards.rounds.models import Round, RoundHole
+from golf_scorecards.rounds.stats import compute_quick_stats
 
 
 def _make_hole(
@@ -13,8 +13,6 @@ def _make_hole(
     handicap: int = 9,
     score: int | None = None,
     putts: int | None = None,
-    fir: int | None = None,
-    gir: int | None = None,
     penalty_strokes: int | None = None,
     up_and_down: int | None = None,
 ) -> RoundHole:
@@ -28,8 +26,6 @@ def _make_hole(
         handicap=handicap,
         score=score,
         putts=putts,
-        fir=fir,
-        gir=gir,
         penalty_strokes=penalty_strokes,
         up_and_down=up_and_down,
     )
@@ -57,7 +53,6 @@ def test_empty_rounds() -> None:
     stats = compute_quick_stats([])
     assert stats.rounds_count == 0
     assert stats.avg_score is None
-    assert stats.gir_pct is None
 
 
 def test_avg_score() -> None:
@@ -77,25 +72,12 @@ def test_avg_putts() -> None:
     assert stats.avg_putts == 36.0
 
 
-def test_gir_percentage() -> None:
-    """GIR percentage counts only holes with GIR data."""
-    holes = [_make_hole(i, gir=1 if i <= 9 else 0) for i in range(1, 19)]
-    r = _make_round(holes=holes)
-    stats = compute_quick_stats([r])
-    assert stats.gir_pct == 50.0
-
-
-def test_fir_percentage_excludes_par3() -> None:
-    """FIR percentage excludes par 3 holes."""
-    holes = []
-    for i in range(1, 19):
-        par = 3 if i in (3, 8, 12, 16) else 4
-        fir = 1 if i <= 9 else 0
-        holes.append(_make_hole(i, par=par, fir=fir))
-    r = _make_round(holes=holes)
-    stats = compute_quick_stats([r])
-    # 14 non-par-3 holes; holes 1-9 minus 3,8 = 7 hits; holes 10-18 minus 12,16 = 7 misses
-    assert stats.fir_pct == 50.0
+def test_gir_removed() -> None:
+    """QuickStats no longer has gir_pct."""
+    stats = compute_quick_stats([])
+    assert not hasattr(stats, "gir_pct")
+    assert not hasattr(stats, "fir_pct")
+    assert not hasattr(stats, "putts_per_gir")
 
 
 def test_up_and_down_pct() -> None:
@@ -104,20 +86,6 @@ def test_up_and_down_pct() -> None:
     r = _make_round(holes=holes)
     stats = compute_quick_stats([r])
     assert stats.up_and_down_pct == 40.0
-
-
-def test_putts_per_gir() -> None:
-    """Putts per GIR is computed from GIR=1 holes with putt data."""
-    holes = [
-        _make_hole(1, gir=1, putts=2),
-        _make_hole(2, gir=1, putts=1),
-        _make_hole(3, gir=0, putts=3),  # Not a GIR hole
-        _make_hole(4, gir=1, putts=2),
-    ]
-    r = _make_round(holes=holes)
-    stats = compute_quick_stats([r])
-    # (2 + 1 + 2) / 3 = 1.67
-    assert stats.putts_per_gir == 1.67
 
 
 def test_multiple_rounds() -> None:

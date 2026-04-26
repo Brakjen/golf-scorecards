@@ -111,10 +111,6 @@ class RoundRepository:
                      WHERE rh.round_id = r.id AND rh.score IS NOT NULL) AS total_score,
                     (SELECT SUM(rh.putts) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.putts IS NOT NULL) AS total_putts,
-                    (SELECT SUM(rh.gir) FROM round_holes rh
-                     WHERE rh.round_id = r.id AND rh.gir IS NOT NULL) AS gir_count,
-                    (SELECT COUNT(*) FROM round_holes rh
-                     WHERE rh.round_id = r.id AND rh.gir IS NOT NULL) AS gir_total,
                     (SELECT SUM(rh.up_and_down) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.up_and_down IS NOT NULL) AS ud_count,
                     (SELECT SUM(rh.down_in_3) FROM round_holes rh
@@ -137,8 +133,6 @@ class RoundRepository:
                     holes_played=row["holes_played"],
                     total_score=row["total_score"],
                     total_putts=row["total_putts"],
-                    gir_count=row["gir_count"],
-                    gir_total=row["gir_total"],
                     ud_count=row["ud_count"],
                     d3_count=row["d3_count"],
                     three_putt_count=row["three_putt_count"],
@@ -169,17 +163,17 @@ class RoundRepository:
             for h in holes:
                 await conn.execute(
                     """UPDATE round_holes SET
-                        score = ?, putts = ?, fir = ?, gir = ?,
+                        score = ?, putts = ?,
                         penalty_strokes = ?, miss_direction = ?,
                         up_and_down = ?, sand_save = ?, sz_in_reg = ?,
-                        down_in_3 = ?, putt_under_4ft = ?, made_over_4ft = ?,
+                        down_in_3 = ?,
                         nfs = ?, notes = ?
                     WHERE round_id = ? AND hole_number = ?""",
                     (
-                        h.score, h.putts, h.fir, h.gir,
+                        h.score, h.putts,
                         h.penalty_strokes, h.miss_direction,
                         h.up_and_down, h.sand_save, h.sz_in_reg,
-                        h.down_in_3, h.putt_under_4ft, h.made_over_4ft,
+                        h.down_in_3,
                         h.nfs, h.notes, round_id, h.hole_number,
                     ),
                 )
@@ -240,16 +234,12 @@ class RoundRepository:
                 handicap=row["handicap"],
                 score=row["score"],
                 putts=row["putts"],
-                fir=row["fir"],
-                gir=row["gir"],
                 penalty_strokes=row["penalty_strokes"],
                 miss_direction=row["miss_direction"],
                 up_and_down=row["up_and_down"],
                 sand_save=row["sand_save"],
                 sz_in_reg=row["sz_in_reg"],
                 down_in_3=row["down_in_3"],
-                putt_under_4ft=row["putt_under_4ft"],
-                made_over_4ft=row["made_over_4ft"],
                 nfs=row["nfs"],
                 notes=row["notes"],
             )

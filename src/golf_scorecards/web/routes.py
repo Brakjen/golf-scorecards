@@ -427,16 +427,12 @@ async def round_save(
                 handicap=h.handicap,
                 score=_int(f"score_{n}"),
                 putts=_int(f"putts_{n}"),
-                fir=_check(f"fir_{n}"),
-                gir=_check(f"gir_{n}"),
                 penalty_strokes=_int(f"penalty_{n}"),
                 miss_direction=_str(f"miss_{n}"),
                 up_and_down=_check(f"ud_{n}"),
                 sand_save=_check(f"sand_{n}"),
                 sz_in_reg=_check(f"sz_{n}"),
                 down_in_3=_check(f"d3_{n}"),
-                putt_under_4ft=_check(f"putt4_{n}"),
-                made_over_4ft=_check(f"made4_{n}"),
                 nfs=_int(f"nfs_{n}"),
                 notes=_str(f"notes_{n}"),
             )
@@ -509,21 +505,12 @@ async def round_detail(
     ) if scored_holes else None
     total_putts = sum(h.putts for h in scored_holes if h.putts is not None)
     total_par = sum(h.par for h in scored_holes)
-    gir_count = sum(1 for h in r.holes if h.gir == 1)
-    gir_total = sum(1 for h in r.holes if h.gir is not None)
-    fir_holes = [h for h in r.holes if h.par > 3]
-    fir_count = sum(1 for h in fir_holes if h.fir == 1)
-    fir_total = sum(1 for h in fir_holes if h.fir is not None)
 
     stats = {
         "total_score": total_score,
         "total_par": total_par,
         "score_vs_par": (total_score - total_par) if total_score is not None else None,
         "total_putts": total_putts,
-        "gir_count": gir_count,
-        "gir_total": gir_total,
-        "fir_count": fir_count,
-        "fir_total": fir_total,
     }
 
     return cast(

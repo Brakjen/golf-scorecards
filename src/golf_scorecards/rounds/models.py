@@ -21,16 +21,12 @@ class RoundHole(BaseModel):
         handicap: Stroke index for the hole (from course snapshot).
         score: Gross strokes taken on the hole.
         putts: Number of putts on the green.
-        fir: Fairway in regulation (1 = hit, 0 = missed, ``None`` = N/A for par 3s).
-        gir: Green in regulation (1 = hit, 0 = missed).
         penalty_strokes: Number of penalty strokes incurred.
         miss_direction: Direction of green miss ("left", "right", "short", "long").
         up_and_down: Whether the player got up-and-down (1 = yes, 0 = no).
         sand_save: Whether the player saved par from a bunker (1 = yes, 0 = no).
         sz_in_reg: Whether the player reached the scoring zone in regulation (1/0).
         down_in_3: Whether the player holed out in ≤3 from the scoring zone (1/0).
-        putt_under_4ft: Whether a putt ≤4 ft was made (1 = made, 0 = missed).
-        made_over_4ft: Whether a putt >4 ft was made (1 = made, 0 = missed).
         nfs: Number of non-functional strikes (chunks, tops, mishits).
         notes: Free-text notes for the hole.
     """
@@ -43,16 +39,12 @@ class RoundHole(BaseModel):
     handicap: int
     score: int | None = None
     putts: int | None = None
-    fir: int | None = None
-    gir: int | None = None
     penalty_strokes: int | None = None
     miss_direction: str | None = None
     up_and_down: int | None = None
     sand_save: int | None = None
     sz_in_reg: int | None = None
     down_in_3: int | None = None
-    putt_under_4ft: int | None = None
-    made_over_4ft: int | None = None
     nfs: int | None = None
     notes: str | None = None
 
@@ -123,8 +115,6 @@ class RoundSummary(BaseModel):
         holes_played: Which holes were played ("18", "front_9", or "back_9").
         total_score: Sum of gross scores across all entered holes.
         total_putts: Sum of putts across all entered holes.
-        gir_count: Number of greens hit in regulation.
-        gir_total: Number of holes with GIR data entered.
         ud_count: Number of successful up-and-downs.
         d3_count: Number of successful down-in-3 conversions.
         three_putt_count: Number of holes with 3 or more putts.
@@ -142,8 +132,6 @@ class RoundSummary(BaseModel):
     holes_played: str = "18"
     total_score: int | None = None
     total_putts: int | None = None
-    gir_count: int | None = None
-    gir_total: int | None = None
     ud_count: int | None = None
     d3_count: int | None = None
     three_putt_count: int | None = None

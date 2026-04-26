@@ -31,9 +31,6 @@
         {% if r.total_putts is not none %}
         <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
         {% endif %}
-        {% if r.gir_total and r.gir_total > 0 %}
-        <span class="stat-pill stat-pill--good">GIR {{ r.gir_count }}/{{ r.gir_total }}</span>
-        {% endif %}
         {% if r.ud_count %}
         <span class="stat-pill stat-pill--good">U&D {{ r.ud_count }}</span>
         {% endif %}

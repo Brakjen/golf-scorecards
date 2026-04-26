@@ -109,8 +109,6 @@ def test_save_holes(
             handicap=h.handicap,
             score=h.par + 1,
             putts=2,
-            fir=1 if h.par > 3 else None,
-            gir=0,
         )
         for h in created.holes
     ]
@@ -142,7 +140,7 @@ def test_list_rounds(
         RoundHole(
             id=h.id, round_id=h.round_id, hole_number=h.hole_number,
             par=h.par, distance=h.distance, handicap=h.handicap,
-            score=4, putts=2, gir=1,
+            score=4, putts=2,
         )
         for h in created.holes
     ]
@@ -158,7 +156,6 @@ def test_list_rounds(
     assert summaries[0].id == created.id
     assert summaries[0].total_score == 72  # 18 holes × 4
     assert summaries[0].total_putts == 36  # 18 holes × 2
-    assert summaries[0].gir_count == 18
 
 
 def test_delete_round(

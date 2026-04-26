@@ -19,21 +19,15 @@ class QuickStats:
         rounds_count: Number of rounds included in the computation.
         avg_score: Mean gross score per round.
         avg_putts: Mean putts per round.
-        gir_pct: Greens in regulation percentage (0–100).
-        fir_pct: Fairways in regulation percentage (0–100).
         avg_penalties: Mean penalty strokes per round.
         up_and_down_pct: Scrambling (up-and-down) percentage (0–100).
-        putts_per_gir: Mean putts on GIR holes.
     """
 
     rounds_count: int
     avg_score: float | None
     avg_putts: float | None
-    gir_pct: float | None
-    fir_pct: float | None
     avg_penalties: float | None
     up_and_down_pct: float | None
-    putts_per_gir: float | None
 
 
 def compute_quick_stats(rounds: list[Round]) -> QuickStats:
@@ -55,11 +49,8 @@ def compute_quick_stats(rounds: list[Round]) -> QuickStats:
             rounds_count=0,
             avg_score=None,
             avg_putts=None,
-            gir_pct=None,
-            fir_pct=None,
             avg_penalties=None,
             up_and_down_pct=None,
-            putts_per_gir=None,
         )
 
     # ── Score & putts ────────────────────────────────────
@@ -83,28 +74,6 @@ def compute_quick_stats(rounds: list[Round]) -> QuickStats:
     avg_putts = _avg(round_putts)
     avg_penalties = _avg(round_penalties)
 
-    # ── GIR ──────────────────────────────────────────────
-    gir_hits = 0
-    gir_total = 0
-    for r in rounds:
-        for h in r.holes:
-            if h.gir is not None:
-                gir_total += 1
-                if h.gir == 1:
-                    gir_hits += 1
-    gir_pct = round(gir_hits / gir_total * 100, 1) if gir_total > 0 else None
-
-    # ── FIR ──────────────────────────────────────────────
-    fir_hits = 0
-    fir_total = 0
-    for r in rounds:
-        for h in r.holes:
-            if h.par > 3 and h.fir is not None:
-                fir_total += 1
-                if h.fir == 1:
-                    fir_hits += 1
-    fir_pct = round(fir_hits / fir_total * 100, 1) if fir_total > 0 else None
-
     # ── Up and down (scrambling) ─────────────────────────
     ud_attempts = 0
     ud_makes = 0
@@ -118,27 +87,12 @@ def compute_quick_stats(rounds: list[Round]) -> QuickStats:
         round(ud_makes / ud_attempts * 100, 1) if ud_attempts > 0 else None
     )
 
-    # ── Putts per GIR ────────────────────────────────────
-    gir_putts_total = 0
-    gir_putts_count = 0
-    for r in rounds:
-        for h in r.holes:
-            if h.gir == 1 and h.putts is not None:
-                gir_putts_total += h.putts
-                gir_putts_count += 1
-    putts_per_gir = (
-        round(gir_putts_total / gir_putts_count, 2) if gir_putts_count > 0 else None
-    )
-
     return QuickStats(
         rounds_count=len(rounds),
         avg_score=round(avg_score, 1) if avg_score is not None else None,
         avg_putts=round(avg_putts, 1) if avg_putts is not None else None,
-        gir_pct=gir_pct,
-        fir_pct=fir_pct,
         avg_penalties=round(avg_penalties, 1) if avg_penalties is not None else None,
         up_and_down_pct=up_and_down_pct,
-        putts_per_gir=putts_per_gir,
     )
 
 
