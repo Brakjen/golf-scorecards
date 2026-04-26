@@ -1119,18 +1119,18 @@ tfoot th {
 
 .btn-refresh {
   background: none;
-  border: 1px solid #999;
+  border: 1px solid var(--rule);
   border-radius: 6px;
   padding: 0.3rem 0.75rem;
   font-size: 0.85rem;
   cursor: pointer;
-  color: #333;
+  color: var(--ink);
   transition: background 0.15s, border-color 0.15s;
 }
 
 .btn-refresh:hover {
-  background: #f0f0f0;
-  border-color: #666;
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .insights-carousel {
@@ -1149,7 +1149,7 @@ tfoot th {
 .insight-number {
   display: inline-block;
   font-size: 0.75rem;
-  color: #888;
+  color: var(--muted);
   margin-bottom: 0.25rem;
 }
 
@@ -1157,7 +1157,7 @@ tfoot th {
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0;
-  color: #222;
+  color: var(--ink);
 }
 
 .insights-nav {
@@ -1170,13 +1170,13 @@ tfoot th {
 
 .insights-nav__btn {
   background: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--rule);
   border-radius: 50%;
   width: 2rem;
   height: 2rem;
   font-size: 0.85rem;
   cursor: pointer;
-  color: #555;
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1184,7 +1184,7 @@ tfoot th {
 }
 
 .insights-nav__btn:hover {
-  background: #f0f0f0;
+  background: var(--accent-soft);
 }
 
 .insights-nav__dots {
@@ -1196,17 +1196,17 @@ tfoot th {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ccc;
+  background: var(--rule);
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .dot--active {
-  background: #555;
+  background: var(--accent);
 }
 
 .insights-empty {
-  color: #888;
+  color: var(--muted);
   font-size: 0.9rem;
   margin: 0.5rem 0;
 }
