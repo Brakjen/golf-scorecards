@@ -176,7 +176,7 @@ class ScorecardBuilder:
         )
 
         if show_stableford_columns and scoring_mode == "stableford":
-            columns.extend(["Pts", "Net"])
+            columns.append("Pts")
 
         columns.extend(
             [
