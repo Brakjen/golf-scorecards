@@ -487,15 +487,17 @@ async def round_save(
             return int(val) if val else None
 
         def _check(field: str) -> int | None:
-            """Parse a checkbox form field as 1 (present) or None (absent).
+            """Parse a checkbox form field as 1 (checked) or 0 (unchecked).
+
+            Returns ``None`` only when the hole has no score (unplayed).
 
             Args:
                 field: The form field name.
 
             Returns:
-                ``1`` if the checkbox was checked, ``None`` otherwise.
+                ``1`` if the checkbox was checked, ``0`` if unchecked.
             """
-            return 1 if form.get(field) else None
+            return 1 if form.get(field) else 0
 
         def _str(field: str) -> str | None:
             """Parse a form field as an optional string.

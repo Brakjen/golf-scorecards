@@ -11,10 +11,9 @@ scoring_zone_in_reg:
     For example, on a par 4 where the player receives 1 stroke,
     SZ in Reg means reaching inside 100 m in 3 shots (4 − 2 + 1).
   logged_as: checkbox per hole (checked = yes, unchecked = no)
-  note: >
-    Only holes where the player explicitly checked or unchecked the box
-    have a value. Holes left blank are unknown and must not be counted
-    in percentages.
+  note: >-
+    Denominator is all scored holes. Unchecked means the player did not
+    reach the scoring zone in regulation on that hole.
 
 down_in_3:
   label: Down in 3 (D3)
@@ -24,8 +23,8 @@ down_in_3:
     was achieved.
   logged_as: checkbox per hole
   note: >
-    Same blank-vs-unchecked caveat as SZ. Only count holes with an
-    explicit value.
+    Denominator is all scored holes. Unchecked means the player did not
+    get down in 3.
 
 up_and_down:
   label: Up & Down (U&D)
@@ -35,8 +34,8 @@ up_and_down:
     chip/pitch plus one putt.
   logged_as: checkbox per hole
   note: >
-    Only meaningful on holes where SZ was missed. Holes left blank
-    are unknown — do not assume unchecked means "failed".
+    Only meaningful on holes where SZ was missed. Denominator is all
+    scored holes. Unchecked means the player did not save up and down.
 
 putts:
   label: Putts
