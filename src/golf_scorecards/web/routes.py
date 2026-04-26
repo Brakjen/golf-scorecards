@@ -33,6 +33,28 @@ router = APIRouter()
 templates = get_templates()
 
 
+def _strokes_received_map(
+    holes: list[RoundHole], playing_handicap: int | None,
+) -> dict[int, int]:
+    """Compute strokes received per hole from playing handicap.
+
+    Args:
+        holes: The round's hole list (needs ``hole_number`` and ``handicap``).
+        playing_handicap: The WHS playing handicap for this tee.
+
+    Returns:
+        Mapping of hole number to strokes received (0, 1, 2, …).
+    """
+    if playing_handicap is None or not holes:
+        return {}
+    sign = 1 if playing_handicap >= 0 else -1
+    base, remainder = divmod(abs(playing_handicap), len(holes))
+    stroke_map = {h.hole_number: sign * base for h in holes}
+    for h in sorted(holes, key=lambda c: c.handicap)[:remainder]:
+        stroke_map[h.hole_number] += sign
+    return stroke_map
+
+
 def _build_scorecard(
     form_data: ScorecardFormData,
     catalog_service: CatalogService,
@@ -347,13 +369,14 @@ async def round_entry_form(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
+    strokes_map = _strokes_received_map(r.holes, r.playing_handicap)
 
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
             request=request,
             name="round_entry.html",
-            context={"round": r, "snapshot": snapshot},
+            context={"round": r, "snapshot": snapshot, "strokes_map": strokes_map},
         ),
     )
 
@@ -509,6 +532,7 @@ async def round_detail(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
+    strokes_map = _strokes_received_map(r.holes, r.playing_handicap)
 
     # Compute summary stats for the detail header
     scored_holes = [h for h in r.holes if h.score is not None]
@@ -530,7 +554,7 @@ async def round_detail(
         templates.TemplateResponse(
             request=request,
             name="round_detail.html",
-            context={"round": r, "snapshot": snapshot, "stats": stats},
+            context={"round": r, "snapshot": snapshot, "stats": stats, "strokes_map": strokes_map},
         ),
     )
 

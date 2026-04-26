@@ -30,6 +30,7 @@
             <th class="col-par">Par</th>
             <th class="col-dist">Dist</th>
             <th class="col-hcp">HCP</th>
+            <th class="col-pen">Stk</th>
             <th class="col-score">Score</th>
             <th class="col-check">SZ</th>
             <th class="col-check">D3</th>
@@ -45,7 +46,7 @@
           {% for hole in round.holes %}
           {% if hole.hole_number == 10 and round.holes_played == '18' %}
           <tr class="turn-row">
-            <td colspan="13">Turn</td>
+            <td colspan="14">Turn</td>
           </tr>
           {% endif %}
           <tr>
@@ -53,6 +54,7 @@
             <td class="cell-fixed">{{ hole.par }}</td>
             <td class="cell-fixed">{{ hole.distance }}</td>
             <td class="cell-fixed">{{ hole.handicap }}</td>
+            <td class="cell-fixed">{{ strokes_map.get(hole.hole_number, '') }}</td>
             <td>
               <input type="number" name="score_{{ hole.hole_number }}"
                      value="{{ hole.score if hole.score is not none else '' }}"
@@ -107,6 +109,7 @@
             <th>Tot</th>
             <th id="tot-par">{{ snapshot.par_total or '' }}</th>
             <th id="tot-dist">{{ snapshot.total_distance or '' }}</th>
+            <th></th>
             <th></th>
             <th id="tot-score">—</th>
             <th></th>
