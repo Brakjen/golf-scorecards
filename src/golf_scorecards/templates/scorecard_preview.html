@@ -102,9 +102,6 @@
             </tr>
           </thead>
           <tbody>
-                {% if scorecard.show_stableford_columns %}
-                <p class="panel-note">The 2 Pts @ column shows the gross score that secures 2 Stableford points on each hole.</p>
-                {% endif %}
             {% for hole in scorecard.all_holes %}
             <tr class="{% if hole.hole_number == 10 %}turn-row{% endif %}">
               <td>{{ hole.hole_number }}</td>
@@ -116,7 +113,6 @@
               <td>{{ hole.distance|default('', true) }}</td>
               {% if scorecard.show_stableford_columns %}
               <td>{{ hole.strokes_received }}</td>
-              <td>{{ hole.two_points_score }}</td>
               {% endif %}
               <td class="blank-cell"></td>
               {% if scorecard.show_stableford_columns %}

@@ -167,7 +167,7 @@ class ScorecardBuilder:
         columns.append("Distance")
 
         if show_stableford_columns and scoring_mode == "stableford":
-            columns.extend(["Strokes", "2 Pts @"])
+            columns.extend(["Strokes"])
 
         columns.extend(
             [

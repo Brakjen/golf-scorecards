@@ -240,7 +240,6 @@
       <col class="col-dist">
       {% if scorecard.show_stableford_columns %}
       <col class="col-strk">
-      <col class="col-2pt">
       {% endif %}
       <!-- remaining columns auto-sized -->
     </colgroup>
@@ -263,7 +262,6 @@
         <td>{{ hole.distance|default('', true) }}</td>
         {% if scorecard.show_stableford_columns %}
         <td>{{ hole.strokes_received }}</td>
-        <td>{{ hole.two_points_score }}</td>
         {% endif %}
         <td class="wr"></td>
         {% if scorecard.show_stableford_columns %}
@@ -319,7 +317,7 @@
   </div>
 
   <div class="sc-legend">
-    Hole · HCP · Par{% if scorecard.show_adjusted_par %} · Adj{% endif %} · Dist{% if scorecard.show_stableford_columns %} · Strokes · 2pt@ · Pts{% endif %} · Score · SZ Reg · Dn3 · Grn Miss · Up&amp;Down · Putts · NFS · Pen
+    Hole · HCP · Par{% if scorecard.show_adjusted_par %} · Adj{% endif %} · Dist{% if scorecard.show_stableford_columns %} · Strokes · Pts{% endif %} · Score · SZ Reg · Dn3 · Grn Miss · Up&amp;Down · Putts · NFS · Pen
   </div>
 </body>
 </html>

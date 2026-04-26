@@ -88,9 +88,9 @@ def test_preview_renders_stableford_columns() -> None:
 
     assert response.status_code == 200
     assert "Stableford" in response.text
-    assert "2 Pts @" in response.text
+    assert "Strokes" in response.text
+    assert "2 Pts @" not in response.text
     assert "Adjusted Par" not in response.text
-    assert "The 2 Pts @ column shows" in response.text
     assert "Scoring-zone regulation uses the 2-point target minus 2." in response.text
 
 
