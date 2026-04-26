@@ -34,21 +34,30 @@ templates = get_templates()
 
 
 def _strokes_received_map(
-    holes: list[RoundHole], playing_handicap: int | None,
+    holes: list[RoundHole],
+    playing_handicap: int | None,
+    holes_played: str = "18",
 ) -> dict[int, int]:
     """Compute strokes received per hole from playing handicap.
 
+    For 9-hole rounds the 18-hole playing handicap is halved (rounded)
+    per WHS convention before distributing strokes.
+
     Args:
         holes: The round's hole list (needs ``hole_number`` and ``handicap``).
-        playing_handicap: The WHS playing handicap for this tee.
+        playing_handicap: The WHS 18-hole playing handicap for this tee.
+        holes_played: ``"18"``, ``"front_9"``, or ``"back_9"``.
 
     Returns:
         Mapping of hole number to strokes received (0, 1, 2, …).
     """
     if playing_handicap is None or not holes:
         return {}
-    sign = 1 if playing_handicap >= 0 else -1
-    base, remainder = divmod(abs(playing_handicap), len(holes))
+    ph = playing_handicap
+    if holes_played in ("front_9", "back_9"):
+        ph = round(playing_handicap / 2)
+    sign = 1 if ph >= 0 else -1
+    base, remainder = divmod(abs(ph), len(holes))
     stroke_map = {h.hole_number: sign * base for h in holes}
     for h in sorted(holes, key=lambda c: c.handicap)[:remainder]:
         stroke_map[h.hole_number] += sign
@@ -386,7 +395,7 @@ async def round_entry_form(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
-    strokes_map = _strokes_received_map(r.holes, r.playing_handicap)
+    strokes_map = _strokes_received_map(r.holes, r.playing_handicap, r.holes_played)
 
     return cast(
         HTMLResponse,
@@ -549,7 +558,7 @@ async def round_detail(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
-    strokes_map = _strokes_received_map(r.holes, r.playing_handicap)
+    strokes_map = _strokes_received_map(r.holes, r.playing_handicap, r.holes_played)
 
     # Compute summary stats for the detail header
     scored_holes = [h for h in r.holes if h.score is not None]
