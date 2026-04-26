@@ -66,6 +66,8 @@ class InsightsService:
         self,
         rounds: list[Round],
         handicap_index: str | None = None,
+        *,
+        force: bool = False,
     ) -> list[str]:
         """Generate fresh coaching insights from recent rounds.
 
@@ -76,9 +78,10 @@ class InsightsService:
         Args:
             rounds: Recent rounds with full hole data, newest first.
             handicap_index: The player's current WHS handicap index.
+            force: Skip the cache and always call the API.
 
         Returns:
-            A list of 5 coaching insight strings.
+            A list of 3 coaching insight strings.
 
         Raises:
             ValueError: If the API response cannot be parsed as a JSON array.
@@ -88,10 +91,11 @@ class InsightsService:
 
         rounds_hash = self._hash_rounds(rounds)
 
-        # Check cache
-        cached = await self._read_cache(rounds_hash)
-        if cached is not None:
-            return cached
+        # Check cache (skip when force-refreshing)
+        if not force:
+            cached = await self._read_cache(rounds_hash)
+            if cached is not None:
+                return cached
 
         # Build prompt
         stats = compute_quick_stats(rounds)

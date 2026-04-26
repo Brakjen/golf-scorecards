@@ -716,5 +716,6 @@ async def insights_refresh(
     await insights_service.generate_insights(
         rounds,
         handicap_index=await settings_repo.get("handicap_index"),
+        force=True,
     )
     return RedirectResponse(url="/", status_code=303)
