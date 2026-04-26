@@ -62,7 +62,6 @@
           <th class="col-putts">Putts</th>
           <th class="col-pen">NFS</th>
           <th class="col-pen">Pen</th>
-          <th class="col-check">Sand</th>
           <th class="col-notes">Notes</th>
         </tr>
       </thead>
@@ -70,7 +69,7 @@
         {% for hole in round.holes %}
         {% if hole.hole_number == 10 and round.holes_played == '18' %}
         <tr class="turn-row">
-          <td colspan="14">Turn</td>
+          <td colspan="13">Turn</td>
         </tr>
         {% endif %}
         <tr>
@@ -94,9 +93,6 @@
           <td class="cell-value">{{ hole.putts if hole.putts is not none else '—' }}</td>
           <td class="cell-value">{{ hole.nfs if hole.nfs is not none else '—' }}</td>
           <td class="cell-value">{{ hole.penalty_strokes if hole.penalty_strokes is not none else '—' }}</td>
-          <td class="cell-value">
-            {% if hole.sand_save == 1 %}✓{% elif hole.sand_save == 0 %}✗{% else %}—{% endif %}
-          </td>
           <td class="cell-value cell-notes-text">{{ hole.notes if hole.notes else '' }}</td>
         </tr>
         {% endfor %}
@@ -115,7 +111,8 @@
           <td class="cell-value">{{ stats.total_putts if stats.total_putts else '—' }}</td>
           <td></td>
           <td></td>
-          <td colspan="2"></td>
+          <td></td>
+          <td></td>
         </tr>
       </tfoot>
     </table>
