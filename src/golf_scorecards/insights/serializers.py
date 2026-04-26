@@ -120,6 +120,8 @@ def serialize_rounds(
                 parts.append("U&D")
             if h.sand_save == 1:
                 parts.append("Sand")
+            if h.notes:
+                parts.append(f'Note:"{h.notes}"')
             lines.append(f"    {' | '.join(parts)}")
 
         lines.append("")

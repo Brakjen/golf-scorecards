@@ -29,13 +29,10 @@ down_in_3:
 up_and_down:
   label: Up & Down (U&D)
   definition: >
-    Getting the ball in the hole in 2 strokes or fewer when the scoring
-    zone was missed (i.e. SZ in Reg was NOT achieved). Typically one
-    chip/pitch plus one putt.
+    Getting the ball in the hole in 2 strokes or fewer from anywhere off the green.
   logged_as: checkbox per hole
   note: >
-    Only meaningful on holes where SZ was missed. Denominator is all
-    scored holes. Unchecked means the player did not save up and down.
+    Unchecked means the player did not save up and down.
 
 putts:
   label: Putts
@@ -60,13 +57,13 @@ penalty_strokes:
   label: Penalty Strokes
   definition: >
     Strokes added under the Rules of Golf (OB, water hazard, lost
-    ball, unplayable lie, etc.). Not included in NFS.
+    ball, unplayable lie, etc.). 
   logged_as: integer per hole
 
 miss_direction:
   label: Green Miss Direction
   definition: >
-    The direction the approach shot missed the green when SZ was missed.
+    The direction the approach shot missed when the intent was to hit the green.
     Values: left, right, short, long.
   logged_as: select per hole (blank if green was hit or not recorded)
 
