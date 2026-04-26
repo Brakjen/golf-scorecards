@@ -183,6 +183,7 @@ class ScorecardBuilder:
                 "SZ in Reg",
                 "Down in 3",
                 "Green Miss",
+                "Hole",
                 "Up and Down",
                 "Putts",
                 "NFS",
