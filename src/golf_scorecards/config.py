@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     debug: bool = True
     db_path: str = "data/golf_scorecards.db"
+    openai_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

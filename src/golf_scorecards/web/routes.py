@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from golf_scorecards.catalog.service import CatalogLookupError, CatalogService
 from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
+from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.models import RoundHole
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.rounds.stats import compute_quick_stats
@@ -21,6 +22,7 @@ from golf_scorecards.web.dependencies import (
     get_catalog_service,
     get_export_service,
     get_handicap_service,
+    get_insights_service,
     get_round_service,
     get_scorecard_builder,
     get_settings_repo,
@@ -91,6 +93,7 @@ async def home(
     catalog_service: CatalogService = Depends(get_catalog_service),
     round_service: RoundService = Depends(get_round_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
+    insights_service: InsightsService | None = Depends(get_insights_service),
 ) -> HTMLResponse:
     """Render the landing page with action cards, quick stats, and recent rounds.
 
@@ -99,6 +102,7 @@ async def home(
         catalog_service: Injected catalog service for course options.
         round_service: Injected round service for recent rounds and stats.
         settings_repo: Injected settings repository for handicap index.
+        insights_service: Injected insights service (None if no API key).
 
     Returns:
         The rendered ``home.html`` template.
@@ -125,6 +129,13 @@ async def home(
         if stats_rounds:
             stats = compute_quick_stats(stats_rounds)
 
+    # Load cached insights
+    insights: list[str] = []
+    if insights_service is not None:
+        cached = await insights_service.get_cached_insights()
+        if cached:
+            insights = cached
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -137,6 +148,7 @@ async def home(
                 "recent_rounds": recent,
                 "stats": stats,
                 "handicap_index": handicap_index,
+                "insights": insights,
             },
         ),
     )
@@ -548,3 +560,54 @@ async def round_delete(
         ) from exc
 
     return RedirectResponse(url="/rounds", status_code=303)
+
+
+@router.post("/insights/refresh")
+async def insights_refresh(
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+) -> RedirectResponse:
+    """Generate fresh coaching insights from recent rounds.
+
+    Loads the last 5 rounds, calls the OpenAI chat completion API,
+    caches the result, and redirects back to the landing page.
+
+    Args:
+        round_service: Injected round service for loading rounds.
+        insights_service: Injected insights service (None if no API key).
+
+    Returns:
+        A redirect to the landing page.
+
+    Raises:
+        HTTPException: 400 if no API key is configured or no rounds exist.
+    """
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    summaries = await round_service.list_rounds()
+    if not summaries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds recorded yet",
+        )
+
+    rounds = []
+    for s in summaries[:5]:
+        try:
+            r = await round_service.get_round(s.id)
+            rounds.append(r)
+        except RoundNotFoundError:
+            continue
+
+    if not rounds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds with data found",
+        )
+
+    await insights_service.generate_insights(rounds)
+    return RedirectResponse(url="/", status_code=303)

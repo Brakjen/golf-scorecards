@@ -12,6 +12,7 @@ from golf_scorecards.config import get_settings
 from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.repository import SlopeRatingsRepository
 from golf_scorecards.handicap.service import HandicapService
+from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.repository import RoundRepository
 from golf_scorecards.rounds.service import RoundService
 from golf_scorecards.scorecards.builder import ScorecardBuilder
@@ -82,3 +83,16 @@ def get_settings_repo() -> SettingsRepository:
     """
     settings = get_settings()
     return SettingsRepository(db_path=settings.db_path)
+
+
+@lru_cache(maxsize=1)
+def get_insights_service() -> InsightsService | None:
+    """Return the singleton insights service, or ``None`` if no API key is set.
+
+    Returns:
+        An ``InsightsService`` if ``OPENAI_API_KEY`` is configured, else ``None``.
+    """
+    settings = get_settings()
+    if not settings.openai_api_key:
+        return None
+    return InsightsService(api_key=settings.openai_api_key, db_path=settings.db_path)
