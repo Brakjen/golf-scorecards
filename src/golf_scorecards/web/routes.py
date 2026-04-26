@@ -66,6 +66,28 @@ def _strokes_received_map(
     return stroke_map
 
 
+def _stableford_map(
+    holes: list[RoundHole],
+    strokes_map: dict[int, int],
+) -> dict[int, int | None]:
+    """Compute Stableford points per hole.
+
+    Points are ``max(0, 2 - (net_score - par))`` where
+    ``net_score = score - strokes_received``.
+
+    Returns:
+        Mapping of hole number to Stableford points (None when no score).
+    """
+    result: dict[int, int | None] = {}
+    for h in holes:
+        if h.score is None:
+            result[h.hole_number] = None
+        else:
+            net = h.score - strokes_map.get(h.hole_number, 0)
+            result[h.hole_number] = max(0, 2 - (net - h.par))
+    return result
+
+
 def _build_scorecard(
     form_data: ScorecardFormData,
     catalog_service: CatalogService,
@@ -399,13 +421,19 @@ async def round_entry_form(
     snapshot = json.loads(r.course_snapshot)
     played = {h.hole_number for h in r.holes}
     strokes_map = _strokes_received_map(snapshot["holes"], r.playing_handicap, played)
+    stableford = _stableford_map(r.holes, strokes_map)
 
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
             request=request,
             name="round_entry.html",
-            context={"round": r, "snapshot": snapshot, "strokes_map": strokes_map},
+            context={
+                "round": r,
+                "snapshot": snapshot,
+                "strokes_map": strokes_map,
+                "stableford": stableford,
+            },
         ),
     )
 
@@ -563,6 +591,7 @@ async def round_detail(
     snapshot = json.loads(r.course_snapshot)
     played = {h.hole_number for h in r.holes}
     strokes_map = _strokes_received_map(snapshot["holes"], r.playing_handicap, played)
+    stableford = _stableford_map(r.holes, strokes_map)
 
     # Compute summary stats for the detail header
     scored_holes = [h for h in r.holes if h.score is not None]
@@ -571,12 +600,18 @@ async def round_detail(
     ) if scored_holes else None
     total_putts = sum(h.putts for h in scored_holes if h.putts is not None)
     total_par = sum(h.par for h in scored_holes)
+    total_stableford = (
+        sum(v for v in stableford.values() if v is not None)
+        if scored_holes
+        else None
+    )
 
     stats = {
         "total_score": total_score,
         "total_par": total_par,
         "score_vs_par": (total_score - total_par) if total_score is not None else None,
         "total_putts": total_putts,
+        "total_stableford": total_stableford,
     }
 
     return cast(
@@ -584,7 +619,13 @@ async def round_detail(
         templates.TemplateResponse(
             request=request,
             name="round_detail.html",
-            context={"round": r, "snapshot": snapshot, "stats": stats, "strokes_map": strokes_map},
+            context={
+                "round": r,
+                "snapshot": snapshot,
+                "stats": stats,
+                "strokes_map": strokes_map,
+                "stableford": stableford,
+            },
         ),
     )
 

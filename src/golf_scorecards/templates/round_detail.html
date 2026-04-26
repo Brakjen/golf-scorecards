@@ -45,6 +45,10 @@
       <span class="stat-block__value">{{ stats.total_putts }}</span>
       <span class="stat-block__label">Putts</span>
     </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.total_stableford if stats.total_stableford is not none else '—' }}</span>
+      <span class="stat-block__label">Stableford</span>
+    </div>
   </div>
   {% endif %}
 
@@ -58,6 +62,7 @@
           <th class="col-hcp">HCP</th>
           <th class="col-pen">Stk</th>
           <th class="col-score">Score</th>
+          <th class="col-pen">Pts</th>
           <th class="col-check">SZ</th>
           <th class="col-check">D3</th>
           <th class="col-miss">Grn Miss</th>
@@ -72,7 +77,7 @@
         {% for hole in round.holes %}
         {% if hole.hole_number == 10 and round.holes_played == '18' %}
         <tr class="turn-row">
-          <td colspan="14">Turn</td>
+          <td colspan="15">Turn</td>
         </tr>
         {% endif %}
         <tr>
@@ -84,6 +89,7 @@
           <td class="cell-value{% if hole.score is not none and hole.score < hole.par %} cell-birdie{% elif hole.score is not none and hole.score > hole.par %} cell-bogey{% endif %}">
             {{ hole.score if hole.score is not none else '—' }}
           </td>
+          <td class="cell-value">{{ stableford.get(hole.hole_number, '—') if stableford.get(hole.hole_number) is not none else '—' }}</td>
           <td class="cell-value">
             {% if hole.sz_in_reg == 1 %}✓{% elif hole.sz_in_reg == 0 %}✗{% else %}—{% endif %}
           </td>
@@ -109,6 +115,7 @@
           <td></td>
           <td></td>
           <td class="cell-value">{{ stats.total_score if stats.total_score is not none else '—' }}</td>
+          <td class="cell-value">{{ stats.total_stableford if stats.total_stableford is not none else '—' }}</td>
           <td></td>
           <td></td>
           <td></td>

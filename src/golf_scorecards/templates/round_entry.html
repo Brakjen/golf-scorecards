@@ -32,6 +32,7 @@
             <th class="col-hcp">HCP</th>
             <th class="col-pen">Stk</th>
             <th class="col-score">Score</th>
+            <th class="col-pen">Pts</th>
             <th class="col-check">SZ</th>
             <th class="col-check">D3</th>
             <th class="col-miss">Grn Miss</th>
@@ -46,7 +47,7 @@
           {% for hole in round.holes %}
           {% if hole.hole_number == 10 and round.holes_played == '18' %}
           <tr class="turn-row">
-            <td colspan="14">Turn</td>
+            <td colspan="15">Turn</td>
           </tr>
           {% endif %}
           <tr>
@@ -60,6 +61,7 @@
                      value="{{ hole.score if hole.score is not none else '' }}"
                      min="1" max="20" class="input-num input-score" data-hole="{{ hole.hole_number }}">
             </td>
+            <td class="cell-fixed stableford-cell" data-hole="{{ hole.hole_number }}" data-par="{{ hole.par }}" data-stk="{{ strokes_map.get(hole.hole_number, 0) }}">{{ stableford.get(hole.hole_number, '') if stableford.get(hole.hole_number) is not none else '' }}</td>
             <td>
               <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
                      tabindex="0" {% if hole.sz_in_reg %}checked{% endif %}>
@@ -112,7 +114,7 @@
             <th></th>
             <th></th>
             <th id="tot-score">—</th>
-            <th></th>
+            <th id="tot-pts">—</th>
             <th></th>
             <th></th>
             <th id="tot-ud">—</th>
@@ -169,6 +171,27 @@
     document.getElementById("tot-nfs").textContent = nfs !== null ? nfs : "—";
     document.getElementById("tot-pen").textContent = pen !== null ? pen : "—";
     document.getElementById("tot-ud").textContent = countChecked("ud_", 18);
+
+    /* Stableford points per hole */
+    let totalPts = 0;
+    let ptsCount = 0;
+    grid.querySelectorAll(".stableford-cell").forEach((cell) => {
+      const hole = cell.dataset.hole;
+      const par = parseInt(cell.dataset.par, 10);
+      const stk = parseInt(cell.dataset.stk, 10) || 0;
+      const scoreEl = grid.querySelector(`[name="score_${hole}"]`);
+      const sv = parseInt(scoreEl.value, 10);
+      if (!isNaN(sv)) {
+        const net = sv - stk;
+        const pts = Math.max(0, 2 - (net - par));
+        cell.textContent = pts;
+        totalPts += pts;
+        ptsCount++;
+      } else {
+        cell.textContent = "";
+      }
+    });
+    document.getElementById("tot-pts").textContent = ptsCount > 0 ? totalPts : "—";
   }
 
   grid.addEventListener("input", updateTotals);
