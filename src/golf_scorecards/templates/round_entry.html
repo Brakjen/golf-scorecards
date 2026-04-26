@@ -14,6 +14,8 @@
         {% endif %}
         {% if round.player_name %} · {{ round.player_name }}{% endif %}
         · {{ round.round_date.isoformat() }}
+        {% if round.handicap_index is not none %} · HCI {{ round.handicap_index }}{% endif %}
+        {% if round.playing_handicap is not none %} · PH {{ round.playing_handicap }}{% endif %}
       </p>
     </div>
     <a href="/rounds/new" class="btn-back">← New round</a>
