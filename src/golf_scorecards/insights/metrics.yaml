@@ -1,0 +1,80 @@
+## Golf Scorecard Metric Definitions
+## These definitions are included in the LLM coaching prompt so the model
+## interprets each stat correctly.
+
+scoring_zone_in_reg:
+  label: Scoring Zone in Regulation (SZ)
+  definition: >
+    Reaching inside 100 metres of the hole in "adjusted regulation".
+    Adjusted regulation means par minus 2 plus any extra strokes the
+    player receives on that hole based on their playing handicap.
+    For example, on a par 4 where the player receives 1 stroke,
+    SZ in Reg means reaching inside 100 m in 3 shots (4 − 2 + 1).
+  logged_as: checkbox per hole (checked = yes, unchecked = no)
+  note: >
+    Only holes where the player explicitly checked or unchecked the box
+    have a value. Holes left blank are unknown and must not be counted
+    in percentages.
+
+down_in_3:
+  label: Down in 3 (D3)
+  definition: >
+    Getting the ball in the hole in 3 strokes or fewer once inside the
+    scoring zone. This only applies to holes where Scoring Zone in Reg
+    was achieved.
+  logged_as: checkbox per hole
+  note: >
+    Same blank-vs-unchecked caveat as SZ. Only count holes with an
+    explicit value.
+
+up_and_down:
+  label: Up & Down (U&D)
+  definition: >
+    Getting the ball in the hole in 2 strokes or fewer when the scoring
+    zone was missed (i.e. SZ in Reg was NOT achieved). Typically one
+    chip/pitch plus one putt.
+  logged_as: checkbox per hole
+  note: >
+    Only meaningful on holes where SZ was missed. Holes left blank
+    are unknown — do not assume unchecked means "failed".
+
+putts:
+  label: Putts
+  definition: Number of putts taken on the green per hole.
+  logged_as: integer per hole
+
+score:
+  label: Gross Score
+  definition: Total strokes taken on the hole including penalties.
+  logged_as: integer per hole
+
+nfs:
+  label: Non-Functional Strikes (NFS)
+  definition: >
+    Strokes that did not meaningfully advance the ball towards the
+    target. Examples include topped shots, shanks, duffs, or severe
+    mishits. These represent execution failures rather than strategic
+    mistakes.
+  logged_as: integer per hole (0 means all strikes were functional)
+
+penalty_strokes:
+  label: Penalty Strokes
+  definition: >
+    Strokes added under the Rules of Golf (OB, water hazard, lost
+    ball, unplayable lie, etc.). Not included in NFS.
+  logged_as: integer per hole
+
+miss_direction:
+  label: Green Miss Direction
+  definition: >
+    The direction the approach shot missed the green when SZ was missed.
+    Values: left, right, short, long.
+  logged_as: select per hole (blank if green was hit or not recorded)
+
+stableford_points:
+  label: Stableford Points
+  definition: >
+    Points awarded per hole using the modified Stableford system.
+    Calculated as max(0, 2 − (net_score − par)) where net_score is
+    gross score minus strokes received on that hole.
+  logged_as: computed automatically from score and playing handicap

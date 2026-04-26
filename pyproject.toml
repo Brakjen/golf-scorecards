@@ -36,6 +36,7 @@ dev = [
 include = [
     "src/golf_scorecards/data/**/*.json",
     "src/golf_scorecards/db/**/*.sql",
+    "src/golf_scorecards/insights/**/*.yaml",
     "src/golf_scorecards/static/**/*",
     "src/golf_scorecards/templates/**/*",
 ]

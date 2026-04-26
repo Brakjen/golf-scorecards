@@ -62,21 +62,30 @@ def serialize_rounds(
         lines.append(f"  Score: {total_score} (par {total_par}, {rel})")
         lines.append(f"  Putts: {total_putts}")
 
-        # Scoring zone stats
+        # Scoring zone stats (only count explicitly logged holes)
         sz_hits = sum(1 for h in scored if h.sz_in_reg == 1)
         sz_total = sum(1 for h in scored if h.sz_in_reg is not None)
         if sz_total:
-            lines.append(f"  SZ in Reg: {sz_hits}/{sz_total}")
+            lines.append(
+                f"  SZ in Reg: {sz_hits}/{sz_total} logged"
+                f" ({len(scored) - sz_total} holes not recorded)"
+            )
 
         d3_hits = sum(1 for h in scored if h.down_in_3 == 1)
         d3_total = sum(1 for h in scored if h.down_in_3 is not None)
         if d3_total:
-            lines.append(f"  Down in 3: {d3_hits}/{d3_total}")
+            lines.append(
+                f"  Down in 3: {d3_hits}/{d3_total} logged"
+                f" ({len(scored) - d3_total} holes not recorded)"
+            )
 
         ud_hits = sum(1 for h in scored if h.up_and_down == 1)
         ud_total = sum(1 for h in scored if h.up_and_down is not None)
         if ud_total:
-            lines.append(f"  Up & Down: {ud_hits}/{ud_total}")
+            lines.append(
+                f"  Up & Down: {ud_hits}/{ud_total} logged"
+                f" ({len(scored) - ud_total} holes not recorded)"
+            )
 
         nfs_total = sum(h.nfs for h in scored if h.nfs is not None and h.nfs > 0)
         if nfs_total:

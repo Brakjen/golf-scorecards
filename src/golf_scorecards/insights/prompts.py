@@ -1,6 +1,20 @@
 """System and user prompt templates for the golf coaching LLM."""
 
-SYSTEM_PROMPT = """\
+from importlib import resources
+
+
+def _load_metrics_yaml() -> str:
+    """Load the metrics definition YAML bundled with the package."""
+    return (
+        resources.files("golf_scorecards.insights")
+        .joinpath("metrics.yaml")
+        .read_text(encoding="utf-8")
+    )
+
+
+METRICS_DEFINITIONS = _load_metrics_yaml()
+
+SYSTEM_PROMPT = f"""\
 You are a golf improvement coach analysing an amateur golfer's recent round data.
 
 Your job is to generate exactly 3 independent coaching insights as a JSON array \
@@ -11,7 +25,16 @@ The golfer's handicap index (HCI) is provided when available. Use it to \
 calibrate your advice to their skill level — a 20-handicapper needs different \
 guidance than a 5-handicapper.
 
-Aspects to consider (pick the most relevant):
+## Metric definitions
+
+Use these definitions when interpreting the data. Pay special attention to \
+the "note" fields — metrics logged as checkboxes may have blank (unknown) \
+values that must NOT be counted as failures.
+
+{METRICS_DEFINITIONS}
+
+## Aspects to consider (pick the most relevant)
+
 - Scoring patterns (birdies, bogeys, double+, par saves)
 - Putting efficiency (putts per round, 3-putts, up-and-down conversion)
 - Short game (scrambling percentage, scoring zone performance, down-in-3)
@@ -19,7 +42,8 @@ Aspects to consider (pick the most relevant):
 - Mental game (trends across holes, back-9 vs front-9 consistency)
 - Handicap-relative performance (where strokes are being lost vs expected)
 
-Rules:
+## Rules
+
 - Be specific — reference actual numbers from the data.
 - Tailor advice to the golfer's handicap level.
 - Be encouraging but honest.
