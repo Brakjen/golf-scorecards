@@ -2,7 +2,7 @@
 
 import json
 from datetime import date
-from typing import cast
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -34,33 +34,35 @@ templates = get_templates()
 
 
 def _strokes_received_map(
-    holes: list[RoundHole],
+    all_holes: list[dict[str, Any]],
     playing_handicap: int | None,
-    holes_played: str = "18",
+    played_hole_numbers: set[int] | None = None,
 ) -> dict[int, int]:
     """Compute strokes received per hole from playing handicap.
 
-    For 9-hole rounds the 18-hole playing handicap is halved (rounded)
-    per WHS convention before distributing strokes.
+    Always distributes the full 18-hole playing handicap across all 18
+    holes, then returns only the holes actually played.  For 9-hole
+    rounds this correctly ignores the strokes that fall on the
+    unplayed nine.
 
     Args:
-        holes: The round's hole list (needs ``hole_number`` and ``handicap``).
+        all_holes: Full course snapshot holes (dicts with
+            ``hole_number`` and ``handicap`` keys).
         playing_handicap: The WHS 18-hole playing handicap for this tee.
-        holes_played: ``"18"``, ``"front_9"``, or ``"back_9"``.
+        played_hole_numbers: If given, only these holes are returned.
 
     Returns:
         Mapping of hole number to strokes received (0, 1, 2, …).
     """
-    if playing_handicap is None or not holes:
+    if playing_handicap is None or not all_holes:
         return {}
-    ph = playing_handicap
-    if holes_played in ("front_9", "back_9"):
-        ph = round(playing_handicap / 2)
-    sign = 1 if ph >= 0 else -1
-    base, remainder = divmod(abs(ph), len(holes))
-    stroke_map = {h.hole_number: sign * base for h in holes}
-    for h in sorted(holes, key=lambda c: c.handicap)[:remainder]:
-        stroke_map[h.hole_number] += sign
+    sign = 1 if playing_handicap >= 0 else -1
+    base, remainder = divmod(abs(playing_handicap), len(all_holes))
+    stroke_map: dict[int, int] = {h["hole_number"]: sign * base for h in all_holes}
+    for h in sorted(all_holes, key=lambda c: c["handicap"])[:remainder]:
+        stroke_map[h["hole_number"]] += sign
+    if played_hole_numbers is not None:
+        return {k: v for k, v in stroke_map.items() if k in played_hole_numbers}
     return stroke_map
 
 
@@ -395,7 +397,8 @@ async def round_entry_form(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
-    strokes_map = _strokes_received_map(r.holes, r.playing_handicap, r.holes_played)
+    played = {h.hole_number for h in r.holes}
+    strokes_map = _strokes_received_map(snapshot["holes"], r.playing_handicap, played)
 
     return cast(
         HTMLResponse,
@@ -558,7 +561,8 @@ async def round_detail(
         ) from exc
 
     snapshot = json.loads(r.course_snapshot)
-    strokes_map = _strokes_received_map(r.holes, r.playing_handicap, r.holes_played)
+    played = {h.hole_number for h in r.holes}
+    strokes_map = _strokes_received_map(snapshot["holes"], r.playing_handicap, played)
 
     # Compute summary stats for the detail header
     scored_holes = [h for h in r.holes if h.score is not None]
