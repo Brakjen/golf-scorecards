@@ -31,6 +31,7 @@ class RoundHole(BaseModel):
         down_in_3: Whether the player holed out in ≤3 from the scoring zone (1/0).
         putt_under_4ft: Whether a putt ≤4 ft was made (1 = made, 0 = missed).
         made_over_4ft: Whether a putt >4 ft was made (1 = made, 0 = missed).
+        nfs: Number of non-functional strikes (chunks, tops, mishits).
         notes: Free-text notes for the hole.
     """
 
@@ -52,6 +53,7 @@ class RoundHole(BaseModel):
     down_in_3: int | None = None
     putt_under_4ft: int | None = None
     made_over_4ft: int | None = None
+    nfs: int | None = None
     notes: str | None = None
 
 

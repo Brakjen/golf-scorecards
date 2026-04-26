@@ -437,6 +437,7 @@ async def round_save(
                 down_in_3=_check(f"d3_{n}"),
                 putt_under_4ft=_check(f"putt4_{n}"),
                 made_over_4ft=_check(f"made4_{n}"),
+                nfs=_int(f"nfs_{n}"),
                 notes=_str(f"notes_{n}"),
             )
         )

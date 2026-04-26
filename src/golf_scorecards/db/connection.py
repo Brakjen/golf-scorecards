@@ -57,6 +57,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
         conn.commit()
 
+    hole_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(round_holes)").fetchall()
+    }
+    if "nfs" not in hole_cols:
+        conn.execute("ALTER TABLE round_holes ADD COLUMN nfs INTEGER")
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

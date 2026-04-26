@@ -173,14 +173,14 @@ class RoundRepository:
                         penalty_strokes = ?, miss_direction = ?,
                         up_and_down = ?, sand_save = ?, sz_in_reg = ?,
                         down_in_3 = ?, putt_under_4ft = ?, made_over_4ft = ?,
-                        notes = ?
+                        nfs = ?, notes = ?
                     WHERE round_id = ? AND hole_number = ?""",
                     (
                         h.score, h.putts, h.fir, h.gir,
                         h.penalty_strokes, h.miss_direction,
                         h.up_and_down, h.sand_save, h.sz_in_reg,
                         h.down_in_3, h.putt_under_4ft, h.made_over_4ft,
-                        h.notes, round_id, h.hole_number,
+                        h.nfs, h.notes, round_id, h.hole_number,
                     ),
                 )
             now = datetime.now().isoformat()
@@ -250,6 +250,7 @@ class RoundRepository:
                 down_in_3=row["down_in_3"],
                 putt_under_4ft=row["putt_under_4ft"],
                 made_over_4ft=row["made_over_4ft"],
+                nfs=row["nfs"],
                 notes=row["notes"],
             )
             for row in rows

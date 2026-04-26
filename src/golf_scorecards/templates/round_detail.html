@@ -65,15 +65,16 @@
           <th class="col-dist">Dist</th>
           <th class="col-hcp">HCP</th>
           <th class="col-score">Score</th>
-          <th class="col-putts">Putts</th>
-          <th class="col-check">FIR</th>
-          <th class="col-check">GIR</th>
-          <th class="col-pen">Pen</th>
-          <th class="col-miss">Miss</th>
-          <th class="col-check">U&D</th>
-          <th class="col-check">Sand</th>
           <th class="col-check">SZ</th>
           <th class="col-check">D3</th>
+          <th class="col-miss">Grn Miss</th>
+          <th class="col-check">U&D</th>
+          <th class="col-putts">Putts</th>
+          <th class="col-pen">NFS</th>
+          <th class="col-pen">Pen</th>
+          <th class="col-check">FIR</th>
+          <th class="col-check">GIR</th>
+          <th class="col-check">Sand</th>
           <th class="col-check">≤4ft</th>
           <th class="col-check">>4ft</th>
           <th class="col-notes">Notes</th>
@@ -83,7 +84,7 @@
         {% for hole in round.holes %}
         {% if hole.hole_number == 10 and round.holes_played == '18' %}
         <tr class="turn-row">
-          <td colspan="17">Turn</td>
+          <td colspan="18">Turn</td>
         </tr>
         {% endif %}
         <tr>
@@ -94,7 +95,19 @@
           <td class="cell-value{% if hole.score is not none and hole.score < hole.par %} cell-birdie{% elif hole.score is not none and hole.score > hole.par %} cell-bogey{% endif %}">
             {{ hole.score if hole.score is not none else '—' }}
           </td>
+          <td class="cell-value">
+            {% if hole.sz_in_reg == 1 %}✓{% elif hole.sz_in_reg == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">
+            {% if hole.down_in_3 == 1 %}✓{% elif hole.down_in_3 == 0 %}✗{% else %}—{% endif %}
+          </td>
+          <td class="cell-value">{{ hole.miss_direction if hole.miss_direction else '—' }}</td>
+          <td class="cell-value">
+            {% if hole.up_and_down == 1 %}✓{% elif hole.up_and_down == 0 %}✗{% else %}—{% endif %}
+          </td>
           <td class="cell-value">{{ hole.putts if hole.putts is not none else '—' }}</td>
+          <td class="cell-value">{{ hole.nfs if hole.nfs is not none else '—' }}</td>
+          <td class="cell-value">{{ hole.penalty_strokes if hole.penalty_strokes is not none else '—' }}</td>
           <td class="cell-value">
             {% if hole.par > 3 %}
               {% if hole.fir == 1 %}✓{% elif hole.fir == 0 %}✗{% else %}—{% endif %}
@@ -105,19 +118,8 @@
           <td class="cell-value">
             {% if hole.gir == 1 %}✓{% elif hole.gir == 0 %}✗{% else %}—{% endif %}
           </td>
-          <td class="cell-value">{{ hole.penalty_strokes if hole.penalty_strokes is not none else '—' }}</td>
-          <td class="cell-value">{{ hole.miss_direction if hole.miss_direction else '—' }}</td>
-          <td class="cell-value">
-            {% if hole.up_and_down == 1 %}✓{% elif hole.up_and_down == 0 %}✗{% else %}—{% endif %}
-          </td>
           <td class="cell-value">
             {% if hole.sand_save == 1 %}✓{% elif hole.sand_save == 0 %}✗{% else %}—{% endif %}
-          </td>
-          <td class="cell-value">
-            {% if hole.sz_in_reg == 1 %}✓{% elif hole.sz_in_reg == 0 %}✗{% else %}—{% endif %}
-          </td>
-          <td class="cell-value">
-            {% if hole.down_in_3 == 1 %}✓{% elif hole.down_in_3 == 0 %}✗{% else %}—{% endif %}
           </td>
           <td class="cell-value">
             {% if hole.putt_under_4ft == 1 %}✓{% elif hole.putt_under_4ft == 0 %}✗{% else %}—{% endif %}
@@ -136,10 +138,16 @@
           <td class="cell-fixed">{{ round.holes | map(attribute='distance') | sum }}</td>
           <td></td>
           <td class="cell-value">{{ stats.total_score if stats.total_score is not none else '—' }}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
           <td class="cell-value">{{ stats.total_putts if stats.total_putts else '—' }}</td>
+          <td></td>
+          <td></td>
           <td class="cell-value">{% if stats.fir_total > 0 %}{{ stats.fir_count }}/{{ stats.fir_total }}{% endif %}</td>
           <td class="cell-value">{% if stats.gir_total > 0 %}{{ stats.gir_count }}/{{ stats.gir_total }}{% endif %}</td>
-          <td colspan="9"></td>
+          <td colspan="4"></td>
         </tr>
       </tfoot>
     </table>

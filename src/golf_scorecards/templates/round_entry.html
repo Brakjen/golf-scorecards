@@ -29,15 +29,16 @@
             <th class="col-dist">Dist</th>
             <th class="col-hcp">HCP</th>
             <th class="col-score">Score</th>
-            <th class="col-putts">Putts</th>
-            <th class="col-check">FIR</th>
-            <th class="col-check">GIR</th>
-            <th class="col-pen">Pen</th>
-            <th class="col-miss">Miss</th>
-            <th class="col-check">U&D</th>
-            <th class="col-check">Sand</th>
             <th class="col-check">SZ</th>
             <th class="col-check">D3</th>
+            <th class="col-miss">Grn Miss</th>
+            <th class="col-check">U&D</th>
+            <th class="col-putts">Putts</th>
+            <th class="col-pen">NFS</th>
+            <th class="col-pen">Pen</th>
+            <th class="col-check">FIR</th>
+            <th class="col-check">GIR</th>
+            <th class="col-check">Sand</th>
             <th class="col-check">≤4ft</th>
             <th class="col-check">>4ft</th>
             <th class="col-notes">Notes</th>
@@ -47,7 +48,7 @@
           {% for hole in round.holes %}
           {% if hole.hole_number == 10 and round.holes_played == '18' %}
           <tr class="turn-row">
-            <td colspan="17">Turn</td>
+            <td colspan="18">Turn</td>
           </tr>
           {% endif %}
           <tr>
@@ -61,26 +62,12 @@
                      min="1" max="20" class="input-num input-score" data-hole="{{ hole.hole_number }}">
             </td>
             <td>
-              <input type="number" name="putts_{{ hole.hole_number }}"
-                     value="{{ hole.putts if hole.putts is not none else '' }}"
-                     min="0" max="10" class="input-num input-putts" data-hole="{{ hole.hole_number }}">
+              <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.sz_in_reg %}checked{% endif %}>
             </td>
             <td>
-              {% if hole.par > 3 %}
-              <input type="checkbox" name="fir_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.fir %}checked{% endif %}>
-              {% else %}
-              <span class="na">—</span>
-              {% endif %}
-            </td>
-            <td>
-              <input type="checkbox" name="gir_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.gir %}checked{% endif %}>
-            </td>
-            <td>
-              <input type="number" name="penalty_{{ hole.hole_number }}"
-                     value="{{ hole.penalty_strokes if hole.penalty_strokes is not none else '' }}"
-                     min="0" max="10" class="input-num input-pen">
+              <input type="checkbox" name="d3_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.down_in_3 %}checked{% endif %}>
             </td>
             <td>
               <select name="miss_{{ hole.hole_number }}" class="input-miss">
@@ -96,16 +83,35 @@
                      tabindex="0" {% if hole.up_and_down %}checked{% endif %}>
             </td>
             <td>
+              <input type="number" name="putts_{{ hole.hole_number }}"
+                     value="{{ hole.putts if hole.putts is not none else '' }}"
+                     min="0" max="10" class="input-num input-putts" data-hole="{{ hole.hole_number }}">
+            </td>
+            <td>
+              <input type="number" name="nfs_{{ hole.hole_number }}"
+                     value="{{ hole.nfs if hole.nfs is not none else '' }}"
+                     min="0" max="10" class="input-num input-nfs">
+            </td>
+            <td>
+              <input type="number" name="penalty_{{ hole.hole_number }}"
+                     value="{{ hole.penalty_strokes if hole.penalty_strokes is not none else '' }}"
+                     min="0" max="10" class="input-num input-pen">
+            </td>
+            <td>
+              {% if hole.par > 3 %}
+              <input type="checkbox" name="fir_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.fir %}checked{% endif %}>
+              {% else %}
+              <span class="na">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <input type="checkbox" name="gir_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.gir %}checked{% endif %}>
+            </td>
+            <td>
               <input type="checkbox" name="sand_{{ hole.hole_number }}" value="1"
                      tabindex="0" {% if hole.sand_save %}checked{% endif %}>
-            </td>
-            <td>
-              <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.sz_in_reg %}checked{% endif %}>
-            </td>
-            <td>
-              <input type="checkbox" name="d3_{{ hole.hole_number }}" value="1"
-                     tabindex="0" {% if hole.down_in_3 %}checked{% endif %}>
             </td>
             <td>
               <input type="checkbox" name="putt4_{{ hole.hole_number }}" value="1"
@@ -130,14 +136,15 @@
             <th id="tot-dist">{{ snapshot.total_distance or '' }}</th>
             <th></th>
             <th id="tot-score">—</th>
-            <th id="tot-putts">—</th>
-            <th id="tot-fir">—</th>
-            <th id="tot-gir">—</th>
-            <th id="tot-pen">—</th>
+            <th></th>
+            <th></th>
             <th></th>
             <th id="tot-ud">—</th>
-            <th></th>
-            <th></th>
+            <th id="tot-putts">—</th>
+            <th id="tot-nfs">—</th>
+            <th id="tot-pen">—</th>
+            <th id="tot-fir">—</th>
+            <th id="tot-gir">—</th>
             <th></th>
             <th></th>
             <th></th>
@@ -183,10 +190,12 @@
   function updateTotals() {
     const score = sumInputs(".input-score");
     const putts = sumInputs(".input-putts");
+    const nfs = sumInputs(".input-nfs");
     const pen = sumInputs(".input-pen");
 
     document.getElementById("tot-score").textContent = score !== null ? score : "—";
     document.getElementById("tot-putts").textContent = putts !== null ? putts : "—";
+    document.getElementById("tot-nfs").textContent = nfs !== null ? nfs : "—";
     document.getElementById("tot-pen").textContent = pen !== null ? pen : "—";
     document.getElementById("tot-fir").textContent = countChecked("fir_", 14);
     document.getElementById("tot-gir").textContent = countChecked("gir_", 18);

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS round_holes (
     down_in_3       INTEGER,
     putt_under_4ft  INTEGER,
     made_over_4ft   INTEGER,
+    nfs             INTEGER,
     notes           TEXT,
     UNIQUE(round_id, hole_number)
 );

@@ -180,14 +180,11 @@ class ScorecardBuilder:
 
         columns.extend(
             [
-                "FIR",
-                "FW Miss",
                 "SZ in Reg",
                 "Down in 3",
                 "Green Miss",
                 "Up and Down",
                 "Putts",
-                "Putt <=4 ft",
                 "NFS",
                 "Pen",
             ]
