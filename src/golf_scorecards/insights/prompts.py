@@ -3,7 +3,7 @@
 SYSTEM_PROMPT = """\
 You are a golf improvement coach analysing an amateur golfer's recent round data.
 
-Your job is to generate exactly 5 independent coaching insights as a JSON array \
+Your job is to generate exactly 3 independent coaching insights as a JSON array \
 of strings. Each insight should be 2–3 sentences, actionable, and focus on a \
 different aspect of the golfer's game.
 
@@ -25,11 +25,10 @@ Rules:
 - Be encouraging but honest.
 - Prioritise the biggest areas for improvement.
 - Avoid generic advice that could apply to any golfer.
-- Respond ONLY with a JSON array of 5 strings. No markdown, no wrapper object.
+- Respond ONLY with a JSON array of 3 strings. No markdown, no wrapper object.
 
 Example output format:
-["Insight one here.", "Insight two here.", "Third insight.", "Fourth insight.", \
-"Fifth insight."]
+["Insight one here.", "Insight two here.", "Third insight."]
 """
 
 USER_TEMPLATE = """\
@@ -37,7 +36,7 @@ Here is the golfer's recent round data:
 
 {round_data}
 
-Generate exactly 5 coaching insights as a JSON array of strings.
+Generate exactly 3 coaching insights as a JSON array of strings.
 """
 
 

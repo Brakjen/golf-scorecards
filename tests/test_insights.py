@@ -124,7 +124,7 @@ class TestSerializeRounds:
 class TestPrompts:
     def test_system_prompt_has_json_instruction(self) -> None:
         assert "JSON array" in SYSTEM_PROMPT
-        assert "exactly 5" in SYSTEM_PROMPT
+        assert "exactly 3" in SYSTEM_PROMPT
 
     def test_build_user_message(self) -> None:
         msg = build_user_message("some round data")
