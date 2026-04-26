@@ -537,17 +537,22 @@ async def round_detail(
 
 @router.post("/rounds/{round_id}/delete")
 async def round_delete(
+    request: Request,
     round_id: str,
     round_service: RoundService = Depends(get_round_service),
 ) -> RedirectResponse:
-    """Delete a round and redirect to the round history list.
+    """Delete a round and redirect back.
+
+    Redirects to the URL given by the ``next`` query parameter if present,
+    otherwise falls back to ``GET /rounds``.
 
     Args:
+        request: The incoming HTTP request.
         round_id: The unique round identifier from the URL path.
         round_service: Injected round service.
 
     Returns:
-        A redirect to ``GET /rounds``.
+        A redirect to the ``next`` URL or ``GET /rounds``.
 
     Raises:
         HTTPException: 404 if the round does not exist.
@@ -559,7 +564,10 @@ async def round_delete(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
         ) from exc
 
-    return RedirectResponse(url="/rounds", status_code=303)
+    next_url = request.query_params.get("next", "/rounds")
+    allowed = {"/", "/rounds"}
+    redirect = next_url if next_url in allowed else "/rounds"
+    return RedirectResponse(url=redirect, status_code=303)
 
 
 @router.post("/insights/refresh")
