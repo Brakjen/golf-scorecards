@@ -288,6 +288,7 @@ async def round_create(
     round_date: str = Form(default=""),
     holes_played: str = Form(default="18"),
     catalog_service: CatalogService = Depends(get_catalog_service),
+    handicap_service: HandicapService = Depends(get_handicap_service),
     round_service: RoundService = Depends(get_round_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> RedirectResponse:
@@ -328,6 +329,18 @@ async def round_create(
     hci_raw = await settings_repo.get("handicap_index")
     hci = float(hci_raw) if hci_raw else None
 
+    # Compute playing handicap from HCI + tee ratings (men profile)
+    playing_hc: int | None = None
+    cr: float | None = None
+    sr: int | None = None
+    if hci is not None and handicap_service.has_ratings(course_slug, tee_name):
+        comp = handicap_service.compute_playing_handicap(
+            course_slug, tee_name, "men", hci,
+        )
+        playing_hc = comp.playing_handicap
+        cr = comp.tee_rating.course_rating
+        sr = comp.tee_rating.slope_rating
+
     valid_holes = {"18", "front_9", "back_9"}
     hp = holes_played if holes_played in valid_holes else "18"
 
@@ -337,6 +350,10 @@ async def round_create(
         round_date=parsed_date,
         player_name=parsed_name,
         handicap_index=hci,
+        handicap_profile="men",
+        playing_handicap=playing_hc,
+        course_rating=cr,
+        slope_rating=sr,
         holes_played=hp,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/edit", status_code=303)
