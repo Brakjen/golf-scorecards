@@ -181,6 +181,40 @@ class RoundService:
         assert updated is not None
         return updated
 
+    async def update_handicap(
+        self,
+        round_id: str,
+        handicap_index: float | None,
+        playing_handicap: int | None,
+        course_rating: float | None = None,
+        slope_rating: int | None = None,
+    ) -> Round:
+        """Update handicap fields on an existing round.
+
+        Args:
+            round_id: The unique round identifier.
+            handicap_index: The player's WHS handicap index.
+            playing_handicap: Computed playing handicap for this tee.
+            course_rating: Course rating (optional).
+            slope_rating: Slope rating (optional).
+
+        Returns:
+            The updated ``Round``.
+
+        Raises:
+            RoundNotFoundError: If no round with the given ID exists.
+        """
+        existing = await self._repo.get_round(round_id)
+        if existing is None:
+            raise RoundNotFoundError(f"Round not found: {round_id}")
+        await self._repo.update_handicap(
+            round_id, handicap_index, playing_handicap,
+            course_rating, slope_rating,
+        )
+        updated = await self._repo.get_round(round_id)
+        assert updated is not None
+        return updated
+
     async def delete_round(self, round_id: str) -> None:
         """Delete a round and all its hole data.
 

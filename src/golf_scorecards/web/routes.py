@@ -11,7 +11,7 @@ from golf_scorecards.catalog.service import CatalogLookupError, CatalogService
 from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
 from golf_scorecards.insights.service import InsightsService
-from golf_scorecards.rounds.models import RoundHole
+from golf_scorecards.rounds.models import Round, RoundHole
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.rounds.stats import compute_quick_stats
 from golf_scorecards.scorecards.builder import ScorecardBuilder
@@ -86,6 +86,26 @@ def _stableford_map(
             net = h.score - strokes_map.get(h.hole_number, 0)
             result[h.hole_number] = max(0, 2 - (net - h.par))
     return result
+
+
+def _total_stableford(r: Round) -> int | None:
+    """Compute Stableford points relative to handicap for a round.
+
+    Returns the difference between actual points and expected points
+    (2 per scored hole).  Positive means played better than handicap.
+    Returns ``None`` if no holes have been scored.
+    """
+    if not r.course_snapshot or not r.playing_handicap:
+        return None
+    snapshot = json.loads(r.course_snapshot)
+    played = {h.hole_number for h in r.holes}
+    strokes = _strokes_received_map(snapshot["holes"], r.playing_handicap, played)
+    pts = _stableford_map(r.holes, strokes)
+    scored = [v for v in pts.values() if v is not None]
+    if not scored:
+        return None
+    expected = 2 * len(scored)
+    return sum(scored) - expected
 
 
 def _build_scorecard(
@@ -173,6 +193,7 @@ async def home(
 
     # Load full round data for the last 5 rounds to compute quick stats
     stats = None
+    round_stableford: dict[str, int] = {}
     if summaries:
         stats_rounds = []
         for s in summaries[:5]:
@@ -183,6 +204,10 @@ async def home(
                 continue
         if stats_rounds:
             stats = compute_quick_stats(stats_rounds)
+        for r in stats_rounds:
+            pts = _total_stableford(r)
+            if pts is not None:
+                round_stableford[r.id] = pts
 
     # Load cached insights
     insights: list[str] = []
@@ -201,6 +226,7 @@ async def home(
                 "initial_course_slug": initial_course["course_slug"],
                 "initial_tee_name": initial_tee,
                 "recent_rounds": recent,
+                "round_stableford": round_stableford,
                 "stats": stats,
                 "handicap_index": handicap_index,
                 "insights": insights,
@@ -443,6 +469,7 @@ async def round_save(
     request: Request,
     round_id: str,
     round_service: RoundService = Depends(get_round_service),
+    handicap_service: HandicapService = Depends(get_handicap_service),
 ) -> RedirectResponse:
     """Save hole-by-hole metric data from the entry form.
 
@@ -533,6 +560,28 @@ async def round_save(
         )
 
     await round_service.save_holes(round_id, holes)
+
+    # Update HCI / PH if the user changed the handicap index
+    hci_raw = str(form.get("handicap_index", "") or "").strip()
+    new_hci = float(hci_raw) if hci_raw else None
+    if new_hci != r.handicap_index:
+        playing_hc: int | None = None
+        cr: float | None = r.course_rating
+        sr_val: int | None = r.slope_rating
+        if (
+            new_hci is not None
+            and handicap_service.has_ratings(r.course_slug, r.tee_name)
+        ):
+            comp = handicap_service.compute_playing_handicap(
+                r.course_slug, r.tee_name, "men", new_hci,
+            )
+            playing_hc = comp.playing_handicap
+            cr = comp.tee_rating.course_rating
+            sr_val = comp.tee_rating.slope_rating
+        await round_service.update_handicap(
+            round_id, new_hci, playing_hc, cr, sr_val,
+        )
+
     return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
 
 
@@ -554,12 +603,23 @@ async def round_list(
         The rendered ``round_list.html`` template.
     """
     summaries = await round_service.list_rounds()
+
+    round_stableford: dict[str, int] = {}
+    for s in summaries:
+        try:
+            r = await round_service.get_round(s.id)
+            pts = _total_stableford(r)
+            if pts is not None:
+                round_stableford[r.id] = pts
+        except RoundNotFoundError:
+            continue
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
             request=request,
             name="round_list.html",
-            context={"rounds": summaries},
+            context={"rounds": summaries, "round_stableford": round_stableford},
         ),
     )
 

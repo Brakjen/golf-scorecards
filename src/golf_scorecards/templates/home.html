@@ -211,6 +211,10 @@
           {% if r.total_score is not none %}
           <span class="stat-pill stat-pill--blue">{{ r.total_score }}</span>
           {% endif %}
+          {% if round_stableford.get(r.id) is not none %}
+          {% set sf = round_stableford[r.id] %}
+          <span class="stat-pill stat-pill--blue">{% if sf > 0 %}+{% endif %}{{ sf }}</span>
+          {% endif %}
           {% if r.total_putts is not none %}
           <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
           {% endif %}

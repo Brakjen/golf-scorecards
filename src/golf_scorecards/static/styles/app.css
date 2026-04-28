@@ -446,6 +446,23 @@ tfoot th {
   white-space: nowrap;
 }
 
+.entry-handicap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.entry-handicap__label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.input-hci {
+  width: 5rem;
+}
+
 .entry-grid-wrapper {
   overflow-x: auto;
   border: 1px solid var(--rule);
@@ -774,6 +791,11 @@ tfoot th {
 .stat-pill--blue {
   background: #3b82c8;
   color: #fff;
+}
+
+.stat-pill--stableford {
+  background: rgba(59, 130, 200, 0.2);
+  color: #6bb3f0;
 }
 
 .stat-pill--good {

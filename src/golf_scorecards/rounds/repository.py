@@ -187,6 +187,42 @@ class RoundRepository:
 
     # ── Delete ───────────────────────────────────────────
 
+    async def update_handicap(
+        self,
+        round_id: str,
+        handicap_index: float | None,
+        playing_handicap: int | None,
+        course_rating: float | None = None,
+        slope_rating: int | None = None,
+    ) -> None:
+        """Update the handicap fields on an existing round.
+
+        Args:
+            round_id: The unique round identifier.
+            handicap_index: The player's WHS handicap index.
+            playing_handicap: Computed playing handicap for this tee.
+            course_rating: Course rating (optional update).
+            slope_rating: Slope rating (optional update).
+        """
+        conn = await self._conn()
+        try:
+            now = datetime.now().isoformat()
+            await conn.execute(
+                """UPDATE rounds SET
+                    handicap_index = ?, playing_handicap = ?,
+                    course_rating = ?, slope_rating = ?,
+                    updated_at = ?
+                WHERE id = ?""",
+                (
+                    handicap_index, playing_handicap,
+                    course_rating, slope_rating,
+                    now, round_id,
+                ),
+            )
+            await conn.commit()
+        finally:
+            await conn.close()
+
     async def delete_round(self, round_id: str) -> bool:
         """Delete a round and its holes via ``ON DELETE CASCADE``.
 
