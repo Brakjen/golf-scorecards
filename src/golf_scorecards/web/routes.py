@@ -629,6 +629,7 @@ async def round_detail(
     request: Request,
     round_id: str,
     round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
 ) -> HTMLResponse:
     """Render the read-only detail view for a saved round.
 
@@ -636,6 +637,7 @@ async def round_detail(
         request: The incoming HTTP request.
         round_id: The unique round identifier from the URL path.
         round_service: Injected round service.
+        insights_service: Injected insights service (None if no API key).
 
     Returns:
         The rendered ``round_detail.html`` template.
@@ -676,6 +678,12 @@ async def round_detail(
         "total_stableford": total_stableford,
     }
 
+    cached_insights: list[str] | None = None
+    if insights_service is not None:
+        cached_insights = await insights_service.get_cached_insights(
+            cache_key=f"round:{round_id}",
+        )
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -687,6 +695,8 @@ async def round_detail(
                 "stats": stats,
                 "strokes_map": strokes_map,
                 "stableford": stableford,
+                "round_insights": cached_insights,
+                "insights_enabled": insights_service is not None,
             },
         ),
     )
@@ -781,3 +791,51 @@ async def insights_refresh(
         force=True,
     )
     return RedirectResponse(url="/", status_code=303)
+
+
+@router.post("/rounds/{round_id}/insights/refresh")
+async def round_insights_refresh(
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> RedirectResponse:
+    """Generate fresh coaching insights focused on a single round.
+
+    Loads the requested round, sends it to the OpenAI chat completion
+    API, caches the result under ``round:<id>``, and redirects back to
+    the round detail page.
+
+    Args:
+        round_id: The round identifier from the URL path.
+        round_service: Injected round service.
+        insights_service: Injected insights service (None if no API key).
+        settings_repo: Injected settings repository for the player HCI.
+
+    Returns:
+        A redirect to the round detail page.
+
+    Raises:
+        HTTPException: 400 if no API key is configured;
+            404 if the round does not exist.
+    """
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    try:
+        r = await round_service.get_round(round_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    await insights_service.generate_insights(
+        [r],
+        handicap_index=await settings_repo.get("handicap_index"),
+        force=True,
+        cache_key=f"round:{round_id}",
+    )
+    return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)

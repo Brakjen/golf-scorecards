@@ -217,3 +217,26 @@ class TestGenerateInsights:
         service._db_path = ":memory:"
         result = await service.generate_insights([])
         assert result == []
+
+    @pytest.mark.asyncio
+    async def test_cache_key_passed_to_read_and_write(self) -> None:
+        service = InsightsService.__new__(InsightsService)
+        service._db_path = ":memory:"
+        service._model = "gpt-4o"
+
+        fresh = ["a", "b", "c"]
+        service._read_cache = AsyncMock(return_value=None)
+        service._call_openai = AsyncMock(return_value=fresh)
+        service._write_cache = AsyncMock()
+
+        r = _make_round("xyz", holes=[_make_hole(1, score=5, putts=2)])
+        result = await service.generate_insights([r], cache_key="round:xyz")
+
+        assert result == fresh
+        # read_cache called with the round-scoped key
+        read_args = service._read_cache.call_args
+        assert read_args.args[0] == "round:xyz"
+        # write_cache called with the round-scoped key
+        write_args = service._write_cache.call_args
+        assert write_args.args[0] == "round:xyz"
+        assert write_args.args[2] == fresh

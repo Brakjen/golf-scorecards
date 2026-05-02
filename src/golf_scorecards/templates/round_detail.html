@@ -129,6 +129,34 @@
     </table>
   </div>
 
+  {% if insights_enabled %}
+  <section class="landing-section landing-card insights-section">
+    <div class="section-header">
+      <h2 class="section-title">Round Insights</h2>
+      {% if round_insights %}
+      <form method="post" action="/rounds/{{ round.id }}/insights/refresh" class="insights-refresh">
+        <button type="submit" class="btn-refresh" title="Generate fresh insights for this round">↻ Refresh</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if round_insights %}
+    <div class="insights-grid">
+      {% for insight in round_insights %}
+      <div class="insight-card">
+        <span class="insight-number">{{ loop.index }}</span>
+        <p class="insight-text">{{ insight }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="insights-empty">No insights generated for this round yet.</p>
+    <form method="post" action="/rounds/{{ round.id }}/insights/refresh" class="insights-refresh insights-refresh--center">
+      <button type="submit" class="btn-refresh">↻ Generate Insights</button>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <div class="back-link">
     <a href="/rounds">← All rounds</a>
   </div>

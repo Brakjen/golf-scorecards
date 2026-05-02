@@ -64,6 +64,15 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE round_holes ADD COLUMN nfs INTEGER")
         conn.commit()
 
+    cache_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(insights_cache)").fetchall()
+    }
+    if "cache_key" not in cache_cols:
+        conn.execute(
+            "ALTER TABLE insights_cache ADD COLUMN cache_key TEXT NOT NULL DEFAULT 'dashboard'"
+        )
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

@@ -45,8 +45,14 @@ class InsightsService:
 
     # ── Public API ───────────────────────────────────────
 
-    async def get_cached_insights(self) -> list[str] | None:
-        """Read the most recent cached insights.
+    async def get_cached_insights(
+        self, cache_key: str = "dashboard",
+    ) -> list[str] | None:
+        """Read the most recent cached insights for a cache key.
+
+        Args:
+            cache_key: Scope identifier (``"dashboard"`` or
+                ``f"round:{round_id}"``).
 
         Returns:
             A list of insight strings, or ``None`` if no cache exists.
@@ -54,7 +60,10 @@ class InsightsService:
         conn = await get_connection(self._db_path)
         try:
             row = await conn.execute_fetchall(
-                "SELECT insights_json FROM insights_cache ORDER BY generated_at DESC LIMIT 1"
+                "SELECT insights_json FROM insights_cache"
+                " WHERE cache_key = ?"
+                " ORDER BY generated_at DESC LIMIT 1",
+                (cache_key,),
             )
             if not row:
                 return None
@@ -68,6 +77,7 @@ class InsightsService:
         handicap_index: str | None = None,
         *,
         force: bool = False,
+        cache_key: str = "dashboard",
     ) -> list[str]:
         """Generate fresh coaching insights from recent rounds.
 
@@ -79,6 +89,8 @@ class InsightsService:
             rounds: Recent rounds with full hole data, newest first.
             handicap_index: The player's current WHS handicap index.
             force: Skip the cache and always call the API.
+            cache_key: Scope for cache isolation (``"dashboard"`` or
+                ``f"round:{id}"``).
 
         Returns:
             A list of 3 coaching insight strings.
@@ -93,7 +105,7 @@ class InsightsService:
 
         # Check cache (skip when force-refreshing)
         if not force:
-            cached = await self._read_cache(rounds_hash)
+            cached = await self._read_cache(cache_key, rounds_hash)
             if cached is not None:
                 return cached
 
@@ -106,7 +118,7 @@ class InsightsService:
         insights = await self._call_openai(user_message)
 
         # Cache result
-        await self._write_cache(rounds_hash, insights)
+        await self._write_cache(cache_key, rounds_hash, insights)
 
         return insights
 
@@ -181,10 +193,13 @@ class InsightsService:
         )
         return hashlib.sha256(data.encode()).hexdigest()
 
-    async def _read_cache(self, rounds_hash: str) -> list[str] | None:
-        """Read cached insights matching the given rounds hash.
+    async def _read_cache(
+        self, cache_key: str, rounds_hash: str,
+    ) -> list[str] | None:
+        """Read cached insights matching the given cache key and rounds hash.
 
         Args:
+            cache_key: Scope identifier.
             rounds_hash: SHA-256 hash of the round IDs.
 
         Returns:
@@ -193,8 +208,9 @@ class InsightsService:
         conn = await get_connection(self._db_path)
         try:
             row = await conn.execute_fetchall(
-                "SELECT insights_json FROM insights_cache WHERE rounds_hash = ?",
-                (rounds_hash,),
+                "SELECT insights_json FROM insights_cache"
+                " WHERE cache_key = ? AND rounds_hash = ?",
+                (cache_key, rounds_hash),
             )
             if not row:
                 return None
@@ -202,24 +218,31 @@ class InsightsService:
         finally:
             await conn.close()
 
-    async def _write_cache(self, rounds_hash: str, insights: list[str]) -> None:
-        """Write insights to the cache table.
+    async def _write_cache(
+        self, cache_key: str, rounds_hash: str, insights: list[str],
+    ) -> None:
+        """Write insights to the cache table for a given scope.
 
-        Replaces any existing cache entries to keep only the latest.
+        Replaces any existing entry for the same ``cache_key`` so that
+        only one cached result per scope is retained.
 
         Args:
+            cache_key: Scope identifier.
             rounds_hash: SHA-256 hash of the round IDs.
             insights: The insight strings to cache.
         """
         conn = await get_connection(self._db_path)
         try:
-            await conn.execute("DELETE FROM insights_cache")
+            await conn.execute(
+                "DELETE FROM insights_cache WHERE cache_key = ?", (cache_key,),
+            )
             await conn.execute(
                 "INSERT INTO insights_cache"
-                " (id, generated_at, rounds_hash, insights_json)"
-                " VALUES (?, ?, ?, ?)",
+                " (id, cache_key, generated_at, rounds_hash, insights_json)"
+                " VALUES (?, ?, ?, ?, ?)",
                 (
                     uuid.uuid4().hex,
+                    cache_key,
                     datetime.now(UTC).isoformat(),
                     rounds_hash,
                     json.dumps(insights),

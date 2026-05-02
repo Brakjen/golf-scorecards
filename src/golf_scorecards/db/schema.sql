@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS round_holes (
 
 CREATE TABLE IF NOT EXISTS insights_cache (
     id              TEXT PRIMARY KEY,
+    cache_key       TEXT NOT NULL DEFAULT 'dashboard',
     generated_at    TEXT NOT NULL,
     rounds_hash     TEXT NOT NULL,
     insights_json   TEXT NOT NULL
