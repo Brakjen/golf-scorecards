@@ -14,6 +14,7 @@ from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.models import Round, RoundHole
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.rounds.stats import compute_quick_stats
+from golf_scorecards.rounds.trends import compute_trends
 from golf_scorecards.scorecards.builder import ScorecardBuilder
 from golf_scorecards.scorecards.forms import ScorecardFormData, parse_scorecard_form
 from golf_scorecards.scorecards.models import PrintableScorecard
@@ -193,6 +194,7 @@ async def home(
 
     # Load full round data for the last 5 rounds to compute quick stats
     stats = None
+    trends = None
     round_stableford: dict[str, int] = {}
     if summaries:
         stats_rounds = []
@@ -204,6 +206,7 @@ async def home(
                 continue
         if stats_rounds:
             stats = compute_quick_stats(stats_rounds)
+            trends = compute_trends(stats_rounds, window=5)
         for r in stats_rounds:
             pts = _total_stableford(r)
             if pts is not None:
@@ -228,6 +231,7 @@ async def home(
                 "recent_rounds": recent,
                 "round_stableford": round_stableford,
                 "stats": stats,
+                "trends": trends,
                 "handicap_index": handicap_index,
                 "insights": insights,
             },

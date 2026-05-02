@@ -1,0 +1,308 @@
+{#
+  Inline SVG sparkline macros (no JS, no chart library).
+
+  Usage:
+    {% from "_macros.html" import sparkline %}
+    {{ sparkline(series) }}
+#}
+
+{% macro sparkline(series, width=200, height=80) %}
+  {#-
+    Renders a single trend series as a filled area sparkline with point
+    labels and (when in range) a zero reference line.
+
+    Args:
+      series: TrendSeries dataclass with .key, .label, .unit, .points,
+              .higher_is_better.
+      width: SVG viewBox width in user units.
+      height: SVG viewBox height in user units.
+  -#}
+  {% set values = series.points | map(attribute='value') | reject('none') | list %}
+  {% if values | length >= 2 %}
+    {% set raw_min = values | min %}
+    {% set raw_max = values | max %}
+    {# Force the visible range to include 0 for "relative-to-zero" metrics
+       so the dashed zero line is meaningful even when all values are
+       on one side of zero. #}
+    {% set include_zero = series.key in ['score_vs_ph', 'stableford_rel'] %}
+    {% set vmin = [raw_min, 0] | min if include_zero else raw_min %}
+    {% set vmax = [raw_max, 0] | max if include_zero else raw_max %}
+    {% set span = (vmax - vmin) if (vmax != vmin) else 1 %}
+    {% set padding_x = 14 %}
+    {% set padding_top = 16 %}
+    {% set padding_bottom = 10 %}
+    {% set inner_w = width - 2 * padding_x %}
+    {% set inner_h = height - padding_top - padding_bottom %}
+    {% set step = (inner_w / (series.points | length - 1)) if (series.points | length > 1) else 0 %}
+
+    {% set ns = namespace(coords=[]) %}
+    {% for p in series.points %}
+      {% if p.value is not none %}
+        {% set x = padding_x + loop.index0 * step %}
+        {% set y = padding_top + inner_h - ((p.value - vmin) / span) * inner_h %}
+        {% set _ = ns.coords.append((x, y, p.value)) %}
+      {% endif %}
+    {% endfor %}
+
+    {% set first = ns.coords[0] %}
+    {% set last = ns.coords[-1] %}
+    {% set delta = last[2] - first[2] %}
+    {% set improving = (delta > 0 and series.higher_is_better) or (delta < 0 and not series.higher_is_better) %}
+    {% set stroke_color = '#4ead7a' if improving else ('#c46a6a' if delta != 0 else '#9aa39a') %}
+    {% set fill_id = 'spark-fill-' ~ series.key %}
+
+    {% set show_zero = (vmin <= 0 <= vmax) and (vmin != vmax) %}
+    {% if show_zero %}
+      {% set zero_y = padding_top + inner_h - ((0 - vmin) / span) * inner_h %}
+    {% endif %}
+    {% set baseline_y = padding_top + inner_h %}
+
+    <svg class="sparkline" viewBox="0 0 {{ width }} {{ height }}"
+         xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"
+         role="img" aria-label="{{ series.label }} trend">
+      <defs>
+        <linearGradient id="{{ fill_id }}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="{{ stroke_color }}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="{{ stroke_color }}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      {% if show_zero %}
+        <line x1="{{ padding_x }}" x2="{{ width - padding_x }}"
+              y1="{{ '%.1f'|format(zero_y) }}" y2="{{ '%.1f'|format(zero_y) }}"
+              stroke="#9aa39a" stroke-width="1" stroke-dasharray="3 3"
+              opacity="0.6"/>
+        <text x="{{ width - padding_x + 1 }}" y="{{ '%.1f'|format(zero_y) }}"
+              font-size="8" fill="#9aa39a" dominant-baseline="middle"
+              text-anchor="start">0</text>
+      {% endif %}
+
+      <polygon
+        fill="url(#{{ fill_id }})"
+        points="{{ '%.1f'|format(first[0]) }},{{ '%.1f'|format(baseline_y) }} {% for c in ns.coords %}{{ '%.1f'|format(c[0]) }},{{ '%.1f'|format(c[1]) }} {% endfor %}{{ '%.1f'|format(last[0]) }},{{ '%.1f'|format(baseline_y) }}"
+      />
+
+      <polyline
+        fill="none"
+        stroke="{{ stroke_color }}"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        points="{% for c in ns.coords %}{{ '%.1f'|format(c[0]) }},{{ '%.1f'|format(c[1]) }} {% endfor %}"
+      />
+
+      {% for c in ns.coords %}
+        {% set v = c[2] %}
+        {% if series.key in ['score_vs_ph', 'stableford_rel'] %}
+          {% set label = '%+d' % (v | round | int) %}
+        {% elif (v % 1) == 0 %}
+          {% set label = v | int %}
+        {% else %}
+          {% set label = '%.1f'|format(v) %}
+        {% endif %}
+        {% set above = c[1] > (padding_top + 8) %}
+        {% set label_y = (c[1] - 6) if above else (c[1] + 12) %}
+        <circle cx="{{ '%.1f'|format(c[0]) }}" cy="{{ '%.1f'|format(c[1]) }}"
+                r="2.5" fill="{{ stroke_color }}"/>
+        <text x="{{ '%.1f'|format(c[0]) }}" y="{{ '%.1f'|format(label_y) }}"
+              font-size="9" font-weight="600" class="sparkline-label"
+              text-anchor="middle">{{ label }}</text>
+      {% endfor %}
+    </svg>
+
+    {% set last_v = last[2] %}
+    {% set display_v = ('%+d' % (last_v|round|int)) if (series.key in ['score_vs_ph', 'stableford_rel']) else (last_v|round(1) if (last_v % 1) else last_v|int) %}
+    <div class="sparkline-meta">
+      <span class="sparkline-value">{{ display_v }}{{ series.unit }}</span>
+      {% if delta != 0 %}
+        <span class="sparkline-delta sparkline-delta--{{ 'up' if improving else 'down' }}">
+          {{ '▲' if delta > 0 else '▼' }}
+        </span>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="sparkline-empty">—</div>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro chart_full(series, width=420, height=260) %}
+  {#-
+    Full-size chart variant with X/Y axes, tick marks, axis labels, and
+    date labels — intended for the hover popover on each trend card.
+
+    Args:
+      series: TrendSeries dataclass.
+      width: SVG viewBox width.
+      height: SVG viewBox height.
+  -#}
+  {% set values = series.points | map(attribute='value') | reject('none') | list %}
+  {% if values | length >= 2 %}
+    {% set raw_min = values | min %}
+    {% set raw_max = values | max %}
+    {% set include_zero = series.key in ['score_vs_ph', 'stableford_rel'] %}
+    {% set vmin = [raw_min, 0] | min if include_zero else raw_min %}
+    {% set vmax = [raw_max, 0] | max if include_zero else raw_max %}
+    {# Add 5% headroom so labels above the topmost point don't clip. #}
+    {% set raw_span = (vmax - vmin) if (vmax != vmin) else 1 %}
+    {% set vmin = vmin - raw_span * 0.08 %}
+    {% set vmax = vmax + raw_span * 0.12 %}
+    {% set span = vmax - vmin %}
+
+    {% set pad_left = 48 %}
+    {% set pad_right = 16 %}
+    {% set pad_top = 24 %}
+    {% set pad_bottom = 42 %}
+    {% set inner_w = width - pad_left - pad_right %}
+    {% set inner_h = height - pad_top - pad_bottom %}
+    {% set step = (inner_w / (series.points | length - 1)) if (series.points | length > 1) else 0 %}
+
+    {% set ns = namespace(coords=[]) %}
+    {% for p in series.points %}
+      {% if p.value is not none %}
+        {% set x = pad_left + loop.index0 * step %}
+        {% set y = pad_top + inner_h - ((p.value - vmin) / span) * inner_h %}
+        {% set _ = ns.coords.append((x, y, p.value, p.round_date)) %}
+      {% endif %}
+    {% endfor %}
+
+    {% set first = ns.coords[0] %}
+    {% set last = ns.coords[-1] %}
+    {% set delta = last[2] - first[2] %}
+    {% set improving = (delta > 0 and series.higher_is_better) or (delta < 0 and not series.higher_is_better) %}
+    {% set stroke_color = '#4ead7a' if improving else ('#c46a6a' if delta != 0 else '#9aa39a') %}
+    {% set fill_id = 'chart-fill-' ~ series.key %}
+
+    {# Build y-ticks. For integer metrics use whole numbers across the
+       visible range (deduped); otherwise 4 evenly spaced values. #}
+    {% set integer_metric = series.key in ['putts'] %}
+    {% set ticks = [] %}
+    {% if integer_metric %}
+      {% set t_lo = vmin | round(0, 'floor') | int %}
+      {% set t_hi = vmax | round(0, 'ceil') | int %}
+      {% set t_range = t_hi - t_lo %}
+      {% if t_range <= 6 %}
+        {% for i in range(t_lo, t_hi + 1) %}
+          {% set _ = ticks.append(i) %}
+        {% endfor %}
+      {% else %}
+        {% set t_step = (t_range / 4) | round | int %}
+        {% if t_step < 1 %}{% set t_step = 1 %}{% endif %}
+        {% for i in range(t_lo, t_hi + 1, t_step) %}
+          {% set _ = ticks.append(i) %}
+        {% endfor %}
+        {% if ticks[-1] != t_hi %}
+          {% set _ = ticks.append(t_hi) %}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      {% set _ = ticks.append(vmin) %}
+      {% set _ = ticks.append(vmin + span / 3) %}
+      {% set _ = ticks.append(vmin + 2 * span / 3) %}
+      {% set _ = ticks.append(vmax) %}
+    {% endif %}
+
+    {% set baseline_y = pad_top + inner_h %}
+    {% set show_zero = (vmin <= 0 <= vmax) %}
+    {% if show_zero %}
+      {% set zero_y = pad_top + inner_h - ((0 - vmin) / span) * inner_h %}
+    {% endif %}
+
+    <svg class="chart-full" viewBox="0 0 {{ width }} {{ height }}"
+         xmlns="http://www.w3.org/2000/svg"
+         role="img" aria-label="{{ series.label }} full chart">
+      <defs>
+        <linearGradient id="{{ fill_id }}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="{{ stroke_color }}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="{{ stroke_color }}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      {# Y-axis gridlines + tick labels. #}
+      {% for t in ticks %}
+        {% set ty = pad_top + inner_h - ((t - vmin) / span) * inner_h %}
+        <line x1="{{ pad_left }}" x2="{{ width - pad_right }}"
+              y1="{{ '%.1f'|format(ty) }}" y2="{{ '%.1f'|format(ty) }}"
+              stroke="#9aa39a" stroke-width="0.5" opacity="0.25"/>
+        <text x="{{ pad_left - 6 }}" y="{{ '%.1f'|format(ty) }}"
+              font-size="13" class="chart-axis-label"
+              dominant-baseline="middle" text-anchor="end">
+          {%- if series.key in ['score_vs_ph', 'stableford_rel'] -%}
+            {{ '%+d' % (t | round | int) }}
+          {%- elif integer_metric -%}
+            {{ t | round | int }}
+          {%- elif (t | abs) < 10 -%}
+            {{ '%.1f'|format(t) }}
+          {%- else -%}
+            {{ t | round | int }}
+          {%- endif -%}
+        </text>
+      {% endfor %}
+
+      {# Zero reference line (drawn on top of gridlines, more prominent). #}
+      {% if show_zero %}
+        <line x1="{{ pad_left }}" x2="{{ width - pad_right }}"
+              y1="{{ '%.1f'|format(zero_y) }}" y2="{{ '%.1f'|format(zero_y) }}"
+              stroke="#9aa39a" stroke-width="1" stroke-dasharray="4 3"
+              opacity="0.7"/>
+      {% endif %}
+
+      {# Y/X axis lines. #}
+      <line x1="{{ pad_left }}" x2="{{ pad_left }}"
+            y1="{{ pad_top }}" y2="{{ baseline_y }}"
+            stroke="#9aa39a" stroke-width="1" opacity="0.6"/>
+      <line x1="{{ pad_left }}" x2="{{ width - pad_right }}"
+            y1="{{ baseline_y }}" y2="{{ baseline_y }}"
+            stroke="#9aa39a" stroke-width="1" opacity="0.6"/>
+
+      {# Filled area under the line. #}
+      <polygon
+        fill="url(#{{ fill_id }})"
+        points="{{ '%.1f'|format(first[0]) }},{{ '%.1f'|format(baseline_y) }} {% for c in ns.coords %}{{ '%.1f'|format(c[0]) }},{{ '%.1f'|format(c[1]) }} {% endfor %}{{ '%.1f'|format(last[0]) }},{{ '%.1f'|format(baseline_y) }}"
+      />
+
+      {# Line. #}
+      <polyline
+        fill="none"
+        stroke="{{ stroke_color }}"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        points="{% for c in ns.coords %}{{ '%.1f'|format(c[0]) }},{{ '%.1f'|format(c[1]) }} {% endfor %}"
+      />
+
+      {# Points + value labels + x-axis date ticks. #}
+      {% for c in ns.coords %}
+        {% set v = c[2] %}
+        {% if series.key in ['score_vs_ph', 'stableford_rel'] %}
+          {% set label = '%+d' % (v | round | int) %}
+        {% elif (v % 1) == 0 %}
+          {% set label = v | int %}
+        {% else %}
+          {% set label = '%.1f'|format(v) %}
+        {% endif %}
+        {% set above = c[1] > (pad_top + 14) %}
+        {% set label_y = (c[1] - 8) if above else (c[1] + 16) %}
+
+        <line x1="{{ '%.1f'|format(c[0]) }}" x2="{{ '%.1f'|format(c[0]) }}"
+              y1="{{ baseline_y }}" y2="{{ baseline_y + 4 }}"
+              stroke="#9aa39a" stroke-width="1" opacity="0.6"/>
+        <circle cx="{{ '%.1f'|format(c[0]) }}" cy="{{ '%.1f'|format(c[1]) }}"
+                r="4" fill="{{ stroke_color }}" stroke="var(--panel, #1a241a)"
+                stroke-width="1.5"/>
+        <text x="{{ '%.1f'|format(c[0]) }}" y="{{ '%.1f'|format(label_y) }}"
+              font-size="13" font-weight="700" class="sparkline-label"
+              text-anchor="middle">{{ label }}{{ series.unit }}</text>
+        <text x="{{ '%.1f'|format(c[0]) }}" y="{{ baseline_y + 18 }}"
+              font-size="12" class="chart-axis-label"
+              text-anchor="middle">{{ c[3].strftime('%b %d') }}</text>
+      {% endfor %}
+
+      {# Title + unit hint. #}
+      <text x="{{ pad_left }}" y="{{ pad_top - 8 }}"
+            font-size="14" font-weight="700" class="chart-title-label">
+        {{ series.label }}{% if series.unit %} ({{ series.unit }}){% endif %}
+      </text>
+    </svg>
+  {% endif %}
+{% endmacro %}

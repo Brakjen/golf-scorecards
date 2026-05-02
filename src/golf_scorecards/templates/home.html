@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import sparkline, chart_full %}
 
 {% block title %}Golf Scorecards{% endblock %}
 
@@ -142,7 +143,7 @@
       {% if stats.up_and_down_pct is not none %}
       <div class="stat-block">
         <span class="stat-block__value">{{ stats.up_and_down_pct }}%</span>
-        <span class="stat-block__label">Scrambling</span>
+        <span class="stat-block__label">Up &amp; down</span>
       </div>
       {% endif %}
       {% if stats.avg_penalties is not none and stats.avg_penalties > 0 %}
@@ -151,6 +152,35 @@
         <span class="stat-block__label">Pen / Round</span>
       </div>
       {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── Trend sparklines (last 5 rounds) ──────────────── -->
+  {% if trends and trends.series %}
+  <section class="landing-section landing-card trends-section">
+    <h2 class="section-title">Trends — Last {{ trends.rounds_count }} Rounds</h2>
+    <div class="trends-grid">
+      {% set _trend_descriptions = {
+        'score_vs_ph': 'Total gross score minus (par on played holes + your share of playing handicap). Lower is better. Negative = beat your handicap.',
+        'putts': 'Total putts on the green for the round. Lower is better.',
+        'scrambling': 'Up-and-down rate: % of holes where you got out of trouble in 2 strokes (typically a chip and a putt), regardless of the final score.',
+        'three_putts': '% of putted holes where you took 3 or more putts. Lower is better.'
+      } %}
+      {% for s in trends.series %}
+      <div class="trend-card" tabindex="0">
+        <div class="trend-card__label" title="{{ _trend_descriptions.get(s.key, '') }}">
+          {{ s.label }}
+        </div>
+        {{ sparkline(s) }}
+        <div class="trend-card__popover" role="tooltip">
+          {{ chart_full(s) }}
+          {% if _trend_descriptions.get(s.key) %}
+          <p class="trend-card__desc">{{ _trend_descriptions[s.key] }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </section>
   {% endif %}
