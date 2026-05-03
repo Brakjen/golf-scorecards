@@ -6,17 +6,38 @@ import hashlib
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from openai import AsyncOpenAI
 
 from golf_scorecards.db.connection import get_connection
-from golf_scorecards.insights.prompts import SYSTEM_PROMPT, build_user_message
+from golf_scorecards.insights.prompts import (
+    QA_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    build_qa_user_message,
+    build_user_message,
+)
 from golf_scorecards.insights.serializers import serialize_rounds
 from golf_scorecards.rounds.models import Round
 from golf_scorecards.rounds.stats import compute_quick_stats
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class QAEntry:
+    """A cached question/answer pair.
+
+    Attributes:
+        question: The user's free-text question.
+        answer: The LLM's plain-prose response.
+        generated_at: ISO-8601 timestamp when the answer was produced.
+    """
+
+    question: str
+    answer: str
+    generated_at: str
 
 
 class InsightsService:
@@ -121,6 +142,49 @@ class InsightsService:
         await self._write_cache(cache_key, rounds_hash, insights)
 
         return insights
+
+    async def answer_question(
+        self,
+        rounds: list[Round],
+        question: str,
+        handicap_index: str | None = None,
+    ) -> QAEntry:
+        """Answer a free-text question about the golfer's recent rounds.
+
+        Sends the question along with the same serialized round data
+        used by ``generate_insights`` to the LLM and returns a plain-prose
+        answer. Answers are not cached — every call hits the API.
+
+        Args:
+            rounds: Rounds to use as context, newest first.
+            question: The user's free-text question.
+            handicap_index: The player's WHS handicap index.
+
+        Returns:
+            A ``QAEntry`` with the original question, the answer, and the
+            generation timestamp.
+
+        Raises:
+            ValueError: If the question is empty or rounds is empty.
+        """
+        question_clean = question.strip()
+        if not question_clean:
+            msg = "Question is empty"
+            raise ValueError(msg)
+        if not rounds:
+            msg = "No rounds provided for context"
+            raise ValueError(msg)
+
+        stats = compute_quick_stats(rounds)
+        round_data = serialize_rounds(rounds, stats, handicap_index)
+        user_message = build_qa_user_message(round_data, question_clean)
+        answer = await self._call_openai_qa(user_message)
+
+        return QAEntry(
+            question=question_clean,
+            answer=answer,
+            generated_at=datetime.now(UTC).isoformat(),
+        )
 
     # ── Private helpers ──────────────────────────────────
 
@@ -251,3 +315,26 @@ class InsightsService:
             await conn.commit()
         finally:
             await conn.close()
+
+    # ── Q&A helpers ──────────────────────────────────────
+
+    async def _call_openai_qa(self, user_message: str) -> str:
+        """Call the chat API for a free-form Q&A request.
+
+        Args:
+            user_message: The formatted user message containing round
+                data and the user's question.
+
+        Returns:
+            The model's plain-prose answer (whitespace stripped).
+        """
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": QA_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.5,
+            max_tokens=1024,
+        )
+        return (response.choices[0].message.content or "").strip()

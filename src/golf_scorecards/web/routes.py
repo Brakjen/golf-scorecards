@@ -183,6 +183,29 @@ async def home(
     Returns:
         The rendered ``home.html`` template.
     """
+    context = await _build_home_context(
+        catalog_service, round_service, settings_repo, insights_service,
+    )
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request, name="home.html", context=context,
+        ),
+    )
+
+
+async def _build_home_context(
+    catalog_service: CatalogService,
+    round_service: RoundService,
+    settings_repo: SettingsRepository,
+    insights_service: InsightsService | None,
+) -> dict[str, Any]:
+    """Assemble the template context shared by the dashboard render paths.
+
+    The Q&A section is left at ``None`` here — callers attach it when
+    rendering the page in response to an ``/ask`` submission, so reloads
+    of ``/`` always start with a clean slate.
+    """
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
     initial_tee = initial_course["tees"][0]
@@ -192,7 +215,6 @@ async def home(
 
     handicap_index = await settings_repo.get("handicap_index")
 
-    # Load full round data for the last 5 rounds to compute quick stats
     stats = None
     trends = None
     round_stableford: dict[str, int] = {}
@@ -212,31 +234,25 @@ async def home(
             if pts is not None:
                 round_stableford[r.id] = pts
 
-    # Load cached insights
     insights: list[str] = []
     if insights_service is not None:
         cached = await insights_service.get_cached_insights()
         if cached:
             insights = cached
 
-    return cast(
-        HTMLResponse,
-        templates.TemplateResponse(
-            request=request,
-            name="home.html",
-            context={
-                "course_options": course_options,
-                "initial_course_slug": initial_course["course_slug"],
-                "initial_tee_name": initial_tee,
-                "recent_rounds": recent,
-                "round_stableford": round_stableford,
-                "stats": stats,
-                "trends": trends,
-                "handicap_index": handicap_index,
-                "insights": insights,
-            },
-        ),
-    )
+    return {
+        "course_options": course_options,
+        "initial_course_slug": initial_course["course_slug"],
+        "initial_tee_name": initial_tee,
+        "recent_rounds": recent,
+        "round_stableford": round_stableford,
+        "stats": stats,
+        "trends": trends,
+        "handicap_index": handicap_index,
+        "insights": insights,
+        "qa_entry": None,
+        "qa_enabled": insights_service is not None,
+    }
 
 
 @router.post("/settings/handicap")
@@ -843,3 +859,81 @@ async def round_insights_refresh(
         cache_key=f"round:{round_id}",
     )
     return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
+
+
+@router.post("/ask", response_class=HTMLResponse, response_model=None)
+async def ask_dashboard(
+    request: Request,
+    question: str = Form(default=""),
+    catalog_service: CatalogService = Depends(get_catalog_service),
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> HTMLResponse | RedirectResponse:
+    """Send a free-form coaching question to the LLM with full round context.
+
+    Renders the dashboard with the answer attached. The answer is not
+    persisted across page loads (a refresh of ``/`` clears it) so the
+    user gets a clean slate every time, but identical re-asks within a
+    short window are still served from the per-question cache to avoid
+    duplicate billing.
+
+    Args:
+        request: The incoming HTTP request.
+        question: The user's free-text question.
+        catalog_service: Injected catalog service.
+        round_service: Injected round service.
+        insights_service: Injected insights service (None if no API key).
+        settings_repo: Injected settings repository for HCI.
+
+    Returns:
+        The rendered dashboard with the answer in place.
+
+    Raises:
+        HTTPException: 400 if no API key is configured or no rounds exist.
+    """
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    question_clean = question.strip()
+    if not question_clean:
+        return RedirectResponse(url="/", status_code=303)
+
+    summaries = await round_service.list_rounds()
+    if not summaries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds recorded yet",
+        )
+
+    rounds = []
+    for s in summaries[:5]:
+        try:
+            rounds.append(await round_service.get_round(s.id))
+        except RoundNotFoundError:
+            continue
+
+    if not rounds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds with data found",
+        )
+
+    qa_entry = await insights_service.answer_question(
+        rounds,
+        question_clean,
+        handicap_index=await settings_repo.get("handicap_index"),
+    )
+    context = await _build_home_context(
+        catalog_service, round_service, settings_repo, insights_service,
+    )
+    context["qa_entry"] = qa_entry
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request, name="home.html", context=context,
+        ),
+    )

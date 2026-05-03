@@ -76,3 +76,56 @@ def build_user_message(round_data: str) -> str:
         The complete user message string.
     """
     return USER_TEMPLATE.format(round_data=round_data)
+
+
+QA_SYSTEM_PROMPT = f"""\
+You are a golf improvement coach answering an amateur golfer's question \
+based on their recent round data.
+
+The golfer's handicap index (HCI) is provided when available. Use it to \
+calibrate your advice to their skill level — a 20-handicapper needs different \
+guidance than a 5-handicapper.
+
+## Metric definitions
+
+Use these definitions when interpreting the data. Pay special attention to \
+the "note" fields — metrics logged as checkboxes may have blank (unknown) \
+values that must NOT be counted as failures.
+
+{METRICS_DEFINITIONS}
+
+## Rules
+
+- Answer the user's question directly and concisely.
+- Cite specific numbers from the round data when relevant.
+- Tailor advice to the golfer's handicap level.
+- Be honest about limitations (e.g. small sample size, missing data).
+- If the question is ambiguous, ask for clarification rather than guessing.
+- Respond in plain prose. No markdown headings, no bullet lists unless the \
+question explicitly asks for a list. Keep it under ~200 words unless more \
+depth is genuinely useful.
+"""
+
+
+QA_USER_TEMPLATE = """\
+Here is the golfer's recent round data:
+
+{round_data}
+
+The golfer asks:
+
+{question}
+"""
+
+
+def build_qa_user_message(round_data: str, question: str) -> str:
+    """Format the user message for a free-form Q&A request.
+
+    Args:
+        round_data: Pre-formatted round data from the serializer.
+        question: The golfer's free-text question.
+
+    Returns:
+        The complete user message string.
+    """
+    return QA_USER_TEMPLATE.format(round_data=round_data, question=question)

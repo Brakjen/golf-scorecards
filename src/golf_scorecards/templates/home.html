@@ -217,6 +217,33 @@
   {% endif %}
   {% endif %}
 
+  <!-- ── Ask the coach (free-form Q&A) ─────────────────── -->
+  {% if qa_enabled and stats and stats.rounds_count > 0 %}
+  <section id="ask" class="landing-section landing-card ask-section">
+    <div class="section-header">
+      <h2 class="section-title">Ask the Coach</h2>
+    </div>
+    <form method="post" action="/ask" class="ask-form">
+      <label for="ask-question" class="ask-form__label">
+        Ask any question about your recent rounds
+      </label>
+      <textarea id="ask-question" name="question" rows="3" class="ask-form__input"
+                placeholder="e.g. Based on my last 5 rounds, what should I improve to drop my HCI by 5?"
+                required></textarea>
+      <button type="submit" class="btn-refresh ask-form__submit">Ask</button>
+    </form>
+    {% if qa_entry %}
+    <div class="ask-answer">
+      <p class="ask-answer__question">
+        <span class="ask-answer__label">You asked:</span>
+        {{ qa_entry.question }}
+      </p>
+      <p class="ask-answer__text">{{ qa_entry.answer }}</p>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <!-- ── Recent rounds (conditional) ───────────────────── -->
   {% if recent_rounds %}
   <section class="landing-section landing-card">

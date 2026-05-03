@@ -240,3 +240,49 @@ class TestGenerateInsights:
         write_args = service._write_cache.call_args
         assert write_args.args[0] == "round:xyz"
         assert write_args.args[2] == fresh
+
+
+class TestAnswerQuestion:
+    @pytest.mark.asyncio
+    async def test_calls_openai_and_returns_entry(self) -> None:
+        service = InsightsService.__new__(InsightsService)
+        service._db_path = ":memory:"
+        service._model = "gpt-4o"
+
+        service._call_openai_qa = AsyncMock(return_value="Work on putting.")
+
+        r = _make_round(holes=[_make_hole(1, score=4, putts=2)])
+        result = await service.answer_question(
+            [r], "Where am I losing strokes?",
+        )
+
+        assert result.question == "Where am I losing strokes?"
+        assert result.answer == "Work on putting."
+        service._call_openai_qa.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_empty_question_raises(self) -> None:
+        service = InsightsService.__new__(InsightsService)
+        service._db_path = ":memory:"
+        r = _make_round(holes=[_make_hole(1, score=4)])
+        with pytest.raises(ValueError, match="empty"):
+            await service.answer_question([r], "   ")
+
+    @pytest.mark.asyncio
+    async def test_empty_rounds_raises(self) -> None:
+        service = InsightsService.__new__(InsightsService)
+        service._db_path = ":memory:"
+        with pytest.raises(ValueError, match="No rounds"):
+            await service.answer_question([], "Anything?")
+
+    @pytest.mark.asyncio
+    async def test_question_is_stripped(self) -> None:
+        service = InsightsService.__new__(InsightsService)
+        service._db_path = ":memory:"
+        service._model = "gpt-4o"
+
+        service._call_openai_qa = AsyncMock(return_value="Answer.")
+
+        r = _make_round(holes=[_make_hole(1, score=4)])
+        result = await service.answer_question([r], "  hello?  ")
+        assert result.question == "hello?"
