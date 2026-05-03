@@ -1484,3 +1484,53 @@ tfoot th {
 .login-form button:hover {
   filter: brightness(1.1);
 }
+
+/* ── Bottom tab bar ──────────────────────────────────── */
+body {
+  padding-bottom: 72px; /* leave room for fixed tab bar */
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-bar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.25rem 0.65rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.72rem;
+  border-top: 2px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.tab-bar__item:hover {
+  color: var(--ink);
+}
+
+.tab-bar__item.is-active {
+  color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+.tab-bar__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.tab-bar__label {
+  letter-spacing: 0.02em;
+}

@@ -5,7 +5,7 @@
 
 {% block body %}
 <main class="page-shell">
-  <div class="landing-top">
+  <div id="settings" class="landing-top">
     <h1 class="landing-title">Golf Scorecards</h1>
     <div class="hci-badge">
       <form method="post" action="/settings/handicap" class="hci-form">
@@ -22,7 +22,7 @@
   </div>
 
   <!-- ── Action cards ──────────────────────────────────── -->
-  <div class="action-cards">
+  <div id="play" class="action-cards">
     <div class="action-card action-card--enter">
       <h2>Enter Round</h2>
       <p>Transcribe your paper scorecard into the app to track stats over time.</p>
@@ -75,7 +75,7 @@
 
   <!-- ── Quick stats (conditional) ─────────────────────── -->
   {% if stats and stats.rounds_count > 0 %}
-  <section class="landing-section landing-card">
+  <section id="stats" class="landing-section landing-card">
     <h2 class="section-title">Quick Stats <span class="section-note">Last {{ stats.rounds_count }} round{{ 's' if stats.rounds_count != 1 else '' }}</span></h2>
     <div class="stat-bar">
       {% if stats.avg_score is not none %}
@@ -137,7 +137,7 @@
 
   <!-- ── Coaching insights (conditional) ───────────────── -->
   {% if insights %}
-  <section class="landing-section landing-card insights-section">
+  <section id="coach" class="landing-section landing-card insights-section">
     <div class="section-header">
       <h2 class="section-title">Coaching Insights</h2>
       <form method="post" action="/insights/refresh" class="insights-refresh">
