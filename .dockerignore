@@ -1,0 +1,35 @@
+# Local dev / test artefacts
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local database & secrets
+data/
+*.db
+.env
+.env.*
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+
+# Source-control plumbing
+.git/
+.gitignore
+
+# Docs / build
+docs/
+slopes/
+tests/
+*.md
+!README.md
+
+# Don't ship the Dockerfile/fly.toml into the image
+Dockerfile
+fly.toml

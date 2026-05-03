@@ -1,0 +1,42 @@
+# Fly.io app config — generated for golf-scorecards.
+# Edit `app` to match the name you choose with `fly launch --no-deploy`
+# (or `fly apps create golf-scorecards-<yourhandle>`).
+#
+# Single-region, single-machine deployment with a persistent volume for
+# the SQLite database. Auto-stop saves money when nobody is using it.
+
+app = "golf-scorecards"
+primary_region = "arn"  # Stockholm — closest Fly region to Norway
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  DB_PATH = "/data/golf_scorecards.db"
+
+[[mounts]]
+  source = "golf_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+# Single small machine — plenty for a personal app and SQLite forces us
+# to one writer anyway. Bump if needed.
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
