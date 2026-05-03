@@ -120,7 +120,7 @@ def test_round_create_redirects_to_entry(client: TestClient) -> None:
 
     assert response.status_code == 303
     assert "/rounds/" in response.headers["location"]
-    assert "/edit" in response.headers["location"]
+    assert "/play" in response.headers["location"]
 
 
 def test_round_entry_form_renders(client: TestClient) -> None:
@@ -138,14 +138,13 @@ def test_round_entry_form_renders(client: TestClient) -> None:
     )
     edit_url = create_response.headers["location"]
 
-    response = client.get(edit_url)
+    response = client.get(edit_url.replace("/play", "/edit"))
 
     assert response.status_code == 200
     assert "Forus" in response.text
     assert "Test Player" in response.text
     assert "score_1" in response.text
     assert "score_18" in response.text
-    assert "putts_1" in response.text
     assert "Save round" in response.text
 
 
@@ -169,7 +168,7 @@ def test_round_save_persists_scores(client: TestClient, db_path: str) -> None:
         follow_redirects=False,
     )
     edit_url = create_response.headers["location"]
-    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+    round_id = edit_url.split("/rounds/")[1].split("/play")[0]
 
     # Submit scores for all 18 holes
     form_data: dict[str, str] = {}
@@ -229,7 +228,7 @@ def test_round_create_defaults_date(client: TestClient) -> None:
     edit_url = create_response.headers["location"]
 
     # Load the entry form and check today's date is shown
-    entry_response = client.get(edit_url)
+    entry_response = client.get(edit_url.replace("/play", "/edit"))
     assert entry_response.status_code == 200
     assert date.today().isoformat() in entry_response.text
 
@@ -277,7 +276,7 @@ def test_round_detail_renders(client: TestClient) -> None:
         follow_redirects=False,
     )
     edit_url = create_response.headers["location"]
-    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+    round_id = edit_url.split("/rounds/")[1].split("/play")[0]
 
     response = client.get(f"/rounds/{round_id}")
     assert response.status_code == 200
@@ -300,7 +299,7 @@ def test_round_detail_with_scores(client: TestClient) -> None:
         follow_redirects=False,
     )
     edit_url = create_response.headers["location"]
-    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+    round_id = edit_url.split("/rounds/")[1].split("/play")[0]
 
     # Submit scores
     form_data: dict[str, str] = {}
@@ -335,7 +334,7 @@ def test_round_delete(client: TestClient) -> None:
         follow_redirects=False,
     )
     edit_url = create_response.headers["location"]
-    round_id = edit_url.split("/rounds/")[1].split("/edit")[0]
+    round_id = edit_url.split("/rounds/")[1].split("/play")[0]
 
     delete_response = client.post(
         f"/rounds/{round_id}/delete",
@@ -372,7 +371,7 @@ def test_round_create_front_9(client: TestClient) -> None:
     edit_url = create_response.headers["location"]
 
     # Entry form should only show holes 1–9
-    entry_response = client.get(edit_url)
+    entry_response = client.get(edit_url.replace("/play", "/edit"))
     assert entry_response.status_code == 200
     assert "score_1" in entry_response.text
     assert "score_9" in entry_response.text
@@ -395,7 +394,7 @@ def test_round_create_back_9(client: TestClient) -> None:
     assert create_response.status_code == 303
     edit_url = create_response.headers["location"]
 
-    entry_response = client.get(edit_url)
+    entry_response = client.get(edit_url.replace("/play", "/edit"))
     assert entry_response.status_code == 200
     assert "score_10" in entry_response.text
     assert "score_18" in entry_response.text

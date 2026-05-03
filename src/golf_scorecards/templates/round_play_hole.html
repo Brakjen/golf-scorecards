@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Hole {{ hole.hole_number }} — {{ round.course_slug | replace('-', ' ') | title }}{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide hole-page">
+  <header class="hole-header">
+    <a href="/rounds/{{ round.id }}/play" class="hole-header__back" aria-label="Back to grid">←</a>
+    <div class="hole-header__title">
+      <span class="hole-header__num">Hole {{ hole.hole_number }}</span>
+      <span class="hole-header__meta">
+        Par {{ hole.par }}{% if hole.distance %} · {{ hole.distance }}m{% endif %} · HCP {{ hole.handicap }}
+      </span>
+    </div>
+    <div class="hole-header__nav">
+      {% if prev_hole %}<a href="/rounds/{{ round.id }}/play/{{ prev_hole }}" class="hole-header__navlink" aria-label="Previous hole">‹</a>{% else %}<span class="hole-header__navlink is-disabled">‹</span>{% endif %}
+      {% if next_hole %}<a href="/rounds/{{ round.id }}/play/{{ next_hole }}" class="hole-header__navlink" aria-label="Next hole">›</a>{% else %}<span class="hole-header__navlink is-disabled">›</span>{% endif %}
+    </div>
+  </header>
+
+  <form method="post" action="/rounds/{{ round.id }}/play/{{ hole.hole_number }}" class="hole-form" id="hole-form">
+    <div class="hole-panels" id="hole-panels">
+
+      <!-- Panel 1: Basics -->
+      <section class="hole-panel" data-panel="1" aria-label="Score and putts">
+        <h2 class="hole-panel__title">Score &amp; Putts</h2>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Score</div>
+          <div class="pill-row pill-row--score">
+            {% for ch in score_choices %}
+            <label class="pill pill--score">
+              <input type="radio" name="score" value="{{ ch.value }}"
+                     {% if hole.score == ch.value %}checked{% endif %}>
+              <span class="pill__top">{{ ch.value }}</span>
+              <span class="pill__sub">{{ ch.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Putts</div>
+          <div class="pill-row">
+            {% for n in [0, 1, 2, 3, 4, 5] %}
+            <label class="pill">
+              <input type="radio" name="putts" value="{{ n }}"
+                     {% if hole.putts == n %}checked{% endif %}>
+              <span class="pill__top">{{ n }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Short game -->
+      <section class="hole-panel" data-panel="2" aria-label="Short game">
+        <h2 class="hole-panel__title">Short Game</h2>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Scoring zone in regulation (SZ)</div>
+          <div class="pill-row pill-row--bool">
+            <label class="pill pill--toggle">
+              <input type="checkbox" name="sz" value="1" {% if hole.sz_in_reg %}checked{% endif %}>
+              <span class="pill__top">SZ</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Up &amp; down</div>
+          <div class="pill-row pill-row--bool">
+            <label class="pill pill--toggle">
+              <input type="checkbox" name="ud" value="1" {% if hole.up_and_down %}checked{% endif %}>
+              <span class="pill__top">U&amp;D</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Down in 3 (from off green)</div>
+          <div class="pill-row pill-row--bool">
+            <label class="pill pill--toggle">
+              <input type="checkbox" name="d3" value="1" {% if hole.down_in_3 %}checked{% endif %}>
+              <span class="pill__top">D3</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 3: Trouble -->
+      <section class="hole-panel" data-panel="3" aria-label="Trouble">
+        <h2 class="hole-panel__title">Trouble</h2>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Penalty strokes</div>
+          <div class="pill-row">
+            {% for n in [0, 1, 2, 3] %}
+            <label class="pill">
+              <input type="radio" name="penalty" value="{{ n }}"
+                     {% if hole.penalty_strokes == n or (hole.penalty_strokes is none and n == 0) %}checked{% endif %}>
+              <span class="pill__top">{{ n }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">Green miss direction</div>
+          <div class="pill-row">
+            {% set _miss = hole.miss_direction or '' %}
+            {% for opt in [('', '—'), ('left', 'L'), ('right', 'R'), ('short', 'Short'), ('long', 'Long')] %}
+            <label class="pill">
+              <input type="radio" name="miss" value="{{ opt[0] }}"
+                     {% if _miss == opt[0] %}checked{% endif %}>
+              <span class="pill__top">{{ opt[1] }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="hole-panel__group">
+          <div class="hole-panel__label">NFS (number from sand)</div>
+          <div class="pill-row">
+            {% for n in [0, 1, 2, 3] %}
+            <label class="pill">
+              <input type="radio" name="nfs" value="{{ n }}"
+                     {% if hole.nfs == n or (hole.nfs is none and n == 0) %}checked{% endif %}>
+              <span class="pill__top">{{ n }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 4: Notes -->
+      <section class="hole-panel" data-panel="4" aria-label="Notes">
+        <h2 class="hole-panel__title">Notes</h2>
+        <textarea name="notes" rows="6" class="hole-notes"
+                  placeholder="What happened on this hole?">{{ hole.notes or '' }}</textarea>
+      </section>
+
+    </div>
+
+    <div class="hole-dots" role="tablist" aria-label="Panel">
+      <button type="button" class="hole-dot is-active" data-target="1" aria-label="Basics"></button>
+      <button type="button" class="hole-dot" data-target="2" aria-label="Short game"></button>
+      <button type="button" class="hole-dot" data-target="3" aria-label="Trouble"></button>
+      <button type="button" class="hole-dot" data-target="4" aria-label="Notes"></button>
+    </div>
+
+    <div class="hole-actions">
+      <button type="submit" name="action" value="grid" class="btn-secondary">Save</button>
+      {% if next_hole %}
+      <button type="submit" name="action" value="next" class="btn-primary">Save &amp; next →</button>
+      {% else %}
+      <button type="submit" name="action" value="grid" class="btn-primary">Save &amp; finish</button>
+      {% endif %}
+    </div>
+  </form>
+</main>
+
+<script>
+  (function () {
+    var panels = document.getElementById("hole-panels");
+    var dots = document.querySelectorAll(".hole-dot");
+    if (!panels || !dots.length) return;
+
+    function activeIndex() {
+      var w = panels.clientWidth;
+      return Math.round(panels.scrollLeft / w);
+    }
+    function syncDots() {
+      var idx = activeIndex();
+      dots.forEach(function (d, i) {
+        d.classList.toggle("is-active", i === idx);
+      });
+    }
+    panels.addEventListener("scroll", function () {
+      window.requestAnimationFrame(syncDots);
+    });
+    dots.forEach(function (d) {
+      d.addEventListener("click", function () {
+        var target = parseInt(d.getAttribute("data-target"), 10) - 1;
+        panels.scrollTo({ left: panels.clientWidth * target, behavior: "smooth" });
+      });
+    });
+  })();
+</script>
+{% endblock %}

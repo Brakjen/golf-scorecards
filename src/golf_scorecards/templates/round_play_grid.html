@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Playing — {{ snapshot.course_name }} ({{ snapshot.tee_name }}){% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide play-page">
+  <header class="play-header">
+    <div class="play-header__title">
+      <h1>{{ snapshot.club_name }}</h1>
+      <p class="play-header__sub">
+        {{ snapshot.course_name }} · Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        · {{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}
+        {% endif %}
+      </p>
+    </div>
+    <div class="play-header__actions">
+      <a href="/rounds/{{ round.id }}/edit" class="btn-secondary btn-secondary--sm">Spreadsheet view</a>
+    </div>
+  </header>
+
+  <section class="play-grid" aria-label="Hole tiles">
+    {% for tile in tiles %}
+    <a href="/rounds/{{ round.id }}/play/{{ tile.hole_number }}"
+       class="play-tile play-tile--{{ tile.state }}"
+       aria-label="Hole {{ tile.hole_number }}, par {{ tile.par }}{% if tile.score %}, score {{ tile.score }}{% endif %}">
+      <span class="play-tile__hole">{{ tile.hole_number }}</span>
+      <span class="play-tile__par">Par {{ tile.par }}</span>
+      <span class="play-tile__score">
+        {% if tile.score is not none %}{{ tile.score }}{% else %}—{% endif %}
+      </span>
+    </a>
+    {% endfor %}
+  </section>
+
+  <footer class="play-footer">
+    <a href="/rounds/{{ round.id }}" class="btn-secondary">Finish &amp; review →</a>
+  </footer>
+</main>
+{% endblock %}
