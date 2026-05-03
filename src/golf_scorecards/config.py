@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     debug: bool = True
     db_path: str = "data/golf_scorecards.db"
     openai_api_key: str = ""
+    app_password: str = ""
+    session_secret: str = "dev-insecure-secret-change-me"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in · Golf Scorecards{% endblock %}
+
+{% block body %}
+<main class="page-shell login-shell">
+  <section class="login-card">
+    <h1>Sign in</h1>
+    <p class="login-card__hint">Enter the app password to continue.</p>
+
+    {% if error %}
+    <p class="login-card__error">Wrong password. Try again.</p>
+    {% endif %}
+
+    <form method="post" action="/login" class="login-form">
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" autocomplete="current-password"
+             autofocus required>
+      <button type="submit">Sign in</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

@@ -7,6 +7,7 @@ ahead of the dynamic ``/rounds/{round_id}`` detail route.
 
 from fastapi import APIRouter
 
+from golf_scorecards.web import auth
 from golf_scorecards.web.routes import (
     coach,
     dashboard,
@@ -16,6 +17,7 @@ from golf_scorecards.web.routes import (
 )
 
 router = APIRouter()
+router.include_router(auth.router)
 router.include_router(dashboard.router)
 router.include_router(play.router)
 router.include_router(rounds.router)
