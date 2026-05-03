@@ -1,23 +1,10 @@
 """Tests for round entry routes (create, entry form, save).
 
-Builds a minimal FastAPI test app with only the round routes. Mocks
-the ``weasyprint`` import to avoid the system library dependency that
-prevents import on machines without ``libgobject``.
+Builds a minimal FastAPI test app with only the round routes.
 """
 
-import sys
-import types
 from datetime import date
 from importlib.resources import files
-from unittest.mock import MagicMock
-
-# ── Mock weasyprint before any golf_scorecards imports ──────────────
-# WeasyPrint requires system libraries (libgobject) that may not be
-# installed in the dev/test environment. We inject a fake module so the
-# import chain (dependencies → export → weasyprint) succeeds.
-_wp = types.ModuleType("weasyprint")
-_wp.HTML = MagicMock()  # type: ignore[attr-defined]
-sys.modules.setdefault("weasyprint", _wp)
 
 import pytest
 from fastapi import FastAPI

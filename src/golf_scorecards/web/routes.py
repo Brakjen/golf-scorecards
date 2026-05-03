@@ -1,14 +1,13 @@
-"""FastAPI route handlers for scorecard creation, preview, export, and round entry."""
+"""FastAPI route handlers for scorecard creation, preview, and round entry."""
 
 import json
 from datetime import date
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from golf_scorecards.catalog.service import CatalogLookupError, CatalogService
-from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
 from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.models import Round, RoundHole
@@ -21,7 +20,6 @@ from golf_scorecards.scorecards.models import PrintableScorecard
 from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
     get_catalog_service,
-    get_export_service,
     get_handicap_service,
     get_insights_service,
     get_round_service,
@@ -295,32 +293,6 @@ async def scorecard_preview(
             name="scorecard_preview.html",
             context={"scorecard": scorecard},
         ),
-    )
-
-
-@router.post("/scorecards/export/pdf")
-async def scorecard_export_pdf(
-    form_data: ScorecardFormData = Depends(parse_scorecard_form),
-    catalog_service: CatalogService = Depends(get_catalog_service),
-    handicap_service: HandicapService = Depends(get_handicap_service),
-    scorecard_builder: ScorecardBuilder = Depends(get_scorecard_builder),
-    export_service: ExportService = Depends(get_export_service),
-) -> Response:
-    """Generate and return a PDF scorecard as a file download."""
-    scorecard = _build_scorecard(
-        form_data, catalog_service, handicap_service, scorecard_builder,
-    )
-    pdf_bytes = export_service.to_pdf(scorecard)
-    date_part = scorecard.meta.round_date.isoformat() if scorecard.meta.round_date else "undated"
-    tee_part = f"_{scorecard.meta.tee_name}" if scorecard.meta.tee_name else ""
-    filename = (
-        f"scorecard_{scorecard.meta.course_name}{tee_part}"
-        f"_{date_part}.pdf"
-    ).replace(" ", "_")
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

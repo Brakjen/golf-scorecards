@@ -6,24 +6,7 @@
 <main class="page-shell page-shell--wide">
   <section class="preview-toolbar">
     <a href="/">← Back</a>
-    <div class="toolbar-actions">
-      <button class="btn-export" onclick="exportScorecard('pdf')">Download PDF</button>
-    </div>
   </section>
-
-  <!-- Hidden form to POST scorecard data to export endpoints -->
-  <form id="export-form" method="post" style="display:none;">
-    <input type="hidden" name="player_name" value="{{ scorecard.meta.player_name or '' }}">
-    <input type="hidden" name="course_slug" value="{{ scorecard.meta.course_slug }}">
-    <input type="hidden" name="tee_name" value="{{ scorecard.meta.tee_name or '' }}">
-    <input type="hidden" name="scoring_mode" value="{{ scorecard.meta.scoring_mode }}">
-    {% if scorecard.meta.target_score is not none %}
-    <input type="hidden" name="target_score" value="{{ scorecard.meta.target_score }}">
-    {% endif %}
-    {% if scorecard.meta.handicap_index_label %}
-    <input type="hidden" name="handicap_index" value="{{ scorecard.meta.handicap_index_raw or '' }}">
-    {% endif %}
-  </form>
 
   <section class="scorecard-sheet">
     <header class="scorecard-header">
@@ -163,12 +146,4 @@
     </section>
   </section>
 </main>
-
-<script>
-function exportScorecard(format) {
-  const form = document.getElementById('export-form');
-  form.action = '/scorecards/export/' + format;
-  form.submit();
-}
-</script>
 {% endblock %}

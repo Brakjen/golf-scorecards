@@ -2,14 +2,12 @@
 
 from functools import lru_cache
 from importlib.resources import files
-from pathlib import Path
 
 from starlette.templating import Jinja2Templates
 
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.config import get_settings
-from golf_scorecards.export import ExportService
 from golf_scorecards.handicap.repository import SlopeRatingsRepository
 from golf_scorecards.handicap.service import HandicapService
 from golf_scorecards.insights.service import InsightsService
@@ -53,12 +51,6 @@ def get_handicap_service() -> HandicapService:
 def get_templates() -> Jinja2Templates:
     """Return the singleton Jinja2 templates instance."""
     return Jinja2Templates(directory=get_templates_directory())
-
-
-@lru_cache(maxsize=1)
-def get_export_service() -> ExportService:
-    """Return the singleton PDF export service."""
-    return ExportService(template_dir=Path(get_templates_directory()))
 
 
 @lru_cache(maxsize=1)

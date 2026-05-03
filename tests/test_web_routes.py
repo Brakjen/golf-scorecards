@@ -1,4 +1,4 @@
-"""Tests for web route handlers (home, preview, export)."""
+"""Tests for web route handlers (home and preview)."""
 
 from fastapi.testclient import TestClient
 
