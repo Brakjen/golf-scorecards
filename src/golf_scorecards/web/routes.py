@@ -1,4 +1,4 @@
-"""FastAPI route handlers for scorecard creation, preview, and round entry."""
+"""FastAPI route handlers for the dashboard, round entry, insights, and Q&A."""
 
 import json
 from datetime import date
@@ -8,22 +8,18 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from golf_scorecards.catalog.service import CatalogLookupError, CatalogService
-from golf_scorecards.handicap.service import HandicapLookupError, HandicapService
+from golf_scorecards.handicap.service import HandicapService
 from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.models import Round, RoundHole
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.rounds.stats import compute_quick_stats
 from golf_scorecards.rounds.trends import compute_trends
-from golf_scorecards.scorecards.builder import ScorecardBuilder
-from golf_scorecards.scorecards.forms import ScorecardFormData, parse_scorecard_form
-from golf_scorecards.scorecards.models import PrintableScorecard
 from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
     get_catalog_service,
     get_handicap_service,
     get_insights_service,
     get_round_service,
-    get_scorecard_builder,
     get_settings_repo,
     get_templates,
 )
@@ -105,60 +101,6 @@ def _total_stableford(r: Round) -> int | None:
         return None
     expected = 2 * len(scored)
     return sum(scored) - expected
-
-
-def _build_scorecard(
-    form_data: ScorecardFormData,
-    catalog_service: CatalogService,
-    handicap_service: HandicapService,
-    scorecard_builder: ScorecardBuilder,
-) -> PrintableScorecard:
-    """Shared scorecard construction used by preview and export routes."""
-    try:
-        course = catalog_service.get_course(form_data.course_slug)
-    except CatalogLookupError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
-
-    tee = None
-    if form_data.tee_name is not None:
-        try:
-            tee = catalog_service.get_tee(form_data.course_slug, form_data.tee_name)
-        except CatalogLookupError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
-
-    handicap = None
-    if form_data.handicap_index is not None and form_data.tee_name is not None:
-        profile_key = form_data.handicap_profile or "men"
-        if not handicap_service.has_ratings(form_data.course_slug, form_data.tee_name):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"No slope data available for {course.course_name} "
-                    f"tee {form_data.tee_name}."
-                ),
-            )
-        try:
-            handicap = handicap_service.compute_playing_handicap(
-                course_slug=form_data.course_slug,
-                tee_name=form_data.tee_name,
-                profile_key=profile_key,
-                handicap_index=form_data.handicap_index,
-            )
-        except HandicapLookupError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-            ) from exc
-
-    return scorecard_builder.build(
-        form_data=form_data,
-        course=course,
-        tee=tee,
-        handicap=handicap,
-    )
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -271,29 +213,6 @@ async def update_handicap_index(
     if value:
         await settings_repo.set("handicap_index", value)
     return RedirectResponse(url="/", status_code=303)
-
-
-@router.post("/scorecards/preview", response_class=HTMLResponse)
-async def scorecard_preview(
-    request: Request,
-    form_data: ScorecardFormData = Depends(parse_scorecard_form),
-    catalog_service: CatalogService = Depends(get_catalog_service),
-    handicap_service: HandicapService = Depends(get_handicap_service),
-    scorecard_builder: ScorecardBuilder = Depends(get_scorecard_builder),
-) -> HTMLResponse:
-    """Build and render the scorecard preview page."""
-    scorecard = _build_scorecard(
-        form_data, catalog_service, handicap_service, scorecard_builder,
-    )
-
-    return cast(
-        HTMLResponse,
-        templates.TemplateResponse(
-            request=request,
-            name="scorecard_preview.html",
-            context={"scorecard": scorecard},
-        ),
-    )
 
 
 # ── Round entry routes ───────────────────────────────────────────────

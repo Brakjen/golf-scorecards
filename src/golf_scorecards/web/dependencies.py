@@ -13,7 +13,6 @@ from golf_scorecards.handicap.service import HandicapService
 from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.repository import RoundRepository
 from golf_scorecards.rounds.service import RoundService
-from golf_scorecards.scorecards.builder import ScorecardBuilder
 from golf_scorecards.settings_repo import SettingsRepository
 
 
@@ -31,12 +30,6 @@ def get_static_directory() -> str:
 def get_catalog_service() -> CatalogService:
     """Return the singleton catalog service."""
     return CatalogService(repository=CourseCatalogRepository())
-
-
-@lru_cache(maxsize=1)
-def get_scorecard_builder() -> ScorecardBuilder:
-    """Return the singleton scorecard builder."""
-    return ScorecardBuilder()
 
 
 @lru_cache(maxsize=1)
