@@ -1,4 +1,4 @@
-"""Dashboard route — the landing page at ``/``."""
+"""Dashboard route — the Play page at ``/``."""
 
 from __future__ import annotations
 
@@ -8,17 +8,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from golf_scorecards.catalog.service import CatalogService
-from golf_scorecards.insights.service import InsightsService
-from golf_scorecards.rounds.service import RoundService
-from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
     get_catalog_service,
-    get_insights_service,
-    get_round_service,
-    get_settings_repo,
     get_templates,
 )
-from golf_scorecards.web.routes._helpers import build_home_context
 
 router = APIRouter()
 templates = get_templates()
@@ -28,14 +21,15 @@ templates = get_templates()
 async def home(
     request: Request,
     catalog_service: CatalogService = Depends(get_catalog_service),
-    round_service: RoundService = Depends(get_round_service),
-    settings_repo: SettingsRepository = Depends(get_settings_repo),
-    insights_service: InsightsService | None = Depends(get_insights_service),
 ) -> HTMLResponse:
-    """Render the landing page with action cards, quick stats, and recent rounds."""
-    context = await build_home_context(
-        catalog_service, round_service, settings_repo, insights_service,
-    )
+    """Render the Play page with the Enter Round form."""
+    course_options = catalog_service.list_course_options()
+    initial_course = course_options[0]
+    context = {
+        "course_options": course_options,
+        "initial_course_slug": initial_course["course_slug"],
+        "initial_tee_name": initial_course["tees"][0],
+    }
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
