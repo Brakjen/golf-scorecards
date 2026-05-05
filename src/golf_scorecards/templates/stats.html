@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Stats{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <h1 class="page-title">Stats</h1>
+
+  {% if stats and stats.rounds_count > 0 %}
+  <section class="landing-section landing-card">
+    <h2 class="section-title">Quick Stats <span class="section-note">Last {{ stats.rounds_count }} round{{ 's' if stats.rounds_count != 1 else '' }}</span></h2>
+    <div class="stat-bar">
+      {% if stats.avg_score is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_score }}</span>
+        <span class="stat-block__label">Avg Score</span>
+      </div>
+      {% endif %}
+      {% if stats.avg_putts is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_putts }}</span>
+        <span class="stat-block__label">Putts / Round</span>
+      </div>
+      {% endif %}
+      {% if stats.up_and_down_pct is not none %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.up_and_down_pct }}%</span>
+        <span class="stat-block__label">Up &amp; down</span>
+      </div>
+      {% endif %}
+      {% if stats.avg_penalties is not none and stats.avg_penalties > 0 %}
+      <div class="stat-block">
+        <span class="stat-block__value">{{ stats.avg_penalties }}</span>
+        <span class="stat-block__label">Pen / Round</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if trends and trends.series %}
+  {% from "_macros.html" import sparkline, chart_full %}
+  <section class="landing-section landing-card trends-section">
+    <h2 class="section-title">Trends — Last {{ trends.rounds_count }} Rounds</h2>
+    <div class="trends-grid">
+      {% set _trend_descriptions = {
+        'score_vs_ph': 'Total gross score minus (par on played holes + your share of playing handicap). Lower is better. Negative = beat your handicap.',
+        'putts': 'Total putts on the green for the round. Lower is better.',
+        'scrambling': 'Up-and-down rate: % of holes where you got out of trouble in 2 strokes (typically a chip and a putt), regardless of the final score.',
+        'three_putts': '% of putted holes where you took 3 or more putts. Lower is better.'
+      } %}
+      {% for s in trends.series %}
+      <div class="trend-card" tabindex="0">
+        <div class="trend-card__label" title="{{ _trend_descriptions.get(s.key, '') }}">
+          {{ s.label }}
+        </div>
+        {{ sparkline(s) }}
+        <div class="trend-card__popover" role="tooltip">
+          {{ chart_full(s) }}
+          {% if _trend_descriptions.get(s.key) %}
+          <p class="trend-card__desc">{{ _trend_descriptions[s.key] }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if not stats or stats.rounds_count == 0 %}
+  <div class="empty-state">
+    <p>No rounds recorded yet. Stats appear after your first round.</p>
+    <a href="/rounds/new" class="btn-primary">Enter your first round</a>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

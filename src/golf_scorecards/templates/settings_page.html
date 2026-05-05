@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <h1 class="page-title">Settings</h1>
+
+  <section class="landing-section landing-card">
+    <h2 class="section-title">Handicap Index</h2>
+    <form method="post" action="/settings/handicap" class="hci-form hci-form--page">
+      <label class="hci-label">
+        <span class="hci-label__text">HCI</span>
+        <input type="text" name="handicap_index" inputmode="decimal"
+               value="{{ handicap_index if handicap_index else '' }}"
+               placeholder="—"
+               class="hci-input">
+      </label>
+      <button type="submit" class="btn-primary">Update</button>
+    </form>
+  </section>
+
+  <section class="landing-section landing-card">
+    <h2 class="section-title">Account</h2>
+    <form method="post" action="/logout" class="logout-form">
+      <button type="submit" class="btn-danger">Sign out</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

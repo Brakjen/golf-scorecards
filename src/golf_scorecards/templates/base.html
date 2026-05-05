@@ -12,7 +12,7 @@
     {% set _path = request.url.path if request else '/' %}
     {% block tabbar %}
     <nav class="tab-bar" aria-label="Primary">
-      <a href="/#play" class="tab-bar__item{% if _path == '/' %} is-active{% endif %}" data-tab="play">
+      <a href="/" class="tab-bar__item{% if _path == '/' %} is-active{% endif %}" data-tab="play">
         <span class="tab-bar__icon" aria-hidden="true">⛳</span>
         <span class="tab-bar__label">Play</span>
       </a>
@@ -20,43 +20,19 @@
         <span class="tab-bar__icon" aria-hidden="true">📋</span>
         <span class="tab-bar__label">Rounds</span>
       </a>
-      <a href="/#stats" class="tab-bar__item" data-tab="stats">
+      <a href="/stats" class="tab-bar__item{% if _path == '/stats' %} is-active{% endif %}" data-tab="stats">
         <span class="tab-bar__icon" aria-hidden="true">📊</span>
         <span class="tab-bar__label">Stats</span>
       </a>
-      <a href="/#coach" class="tab-bar__item" data-tab="coach">
+      <a href="/coach" class="tab-bar__item{% if _path == '/coach' %} is-active{% endif %}" data-tab="coach">
         <span class="tab-bar__icon" aria-hidden="true">🧠</span>
         <span class="tab-bar__label">Coach</span>
       </a>
-      <a href="/#settings" class="tab-bar__item" data-tab="settings">
+      <a href="/settings" class="tab-bar__item{% if _path == '/settings' %} is-active{% endif %}" data-tab="settings">
         <span class="tab-bar__icon" aria-hidden="true">⚙️</span>
         <span class="tab-bar__label">Settings</span>
       </a>
     </nav>
     {% endblock %}
-    <script>
-      // Highlight tab matching the current URL hash on the dashboard.
-      (function () {
-        function syncTab() {
-          if (window.location.pathname !== "/") return;
-          var hash = window.location.hash.replace("#", "");
-          document.querySelectorAll(".tab-bar__item").forEach(function (el) {
-            var tab = el.getAttribute("data-tab");
-            if (hash && tab === hash) {
-              el.classList.add("is-active");
-            } else if (hash && tab !== "rounds") {
-              el.classList.remove("is-active");
-            }
-          });
-          // If no hash, default Play stays active (set server-side).
-          if (!hash) {
-            var play = document.querySelector('.tab-bar__item[data-tab="play"]');
-            if (play) play.classList.add("is-active");
-          }
-        }
-        syncTab();
-        window.addEventListener("hashchange", syncTab);
-      })();
-    </script>
   </body>
 </html>

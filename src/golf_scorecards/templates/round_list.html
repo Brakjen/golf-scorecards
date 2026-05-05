@@ -48,6 +48,7 @@
         {% endif %}
       </div>
       <div class="round-card__actions">
+        <a href="/rounds/{{ r.id }}/play" class="btn-action">Play</a>
         <a href="/rounds/{{ r.id }}/edit" class="btn-action btn-action--edit">Edit</a>
         <form method="post" action="/rounds/{{ r.id }}/delete" class="inline-form"
               onsubmit="return confirm('Delete this round?')">

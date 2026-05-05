@@ -282,7 +282,7 @@ def test_round_detail_renders(client: TestClient) -> None:
     assert response.status_code == 200
     assert "Forus" in response.text
     assert "Detail Player" in response.text
-    assert "Edit scores" in response.text
+    assert "Spreadsheet" in response.text
     assert "Delete" in response.text
 
 

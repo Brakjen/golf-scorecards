@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Coach{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <h1 class="page-title">Coach</h1>
+
+  <!-- ── Coaching insights ─────────────────────────────── -->
+  {% if insights %}
+  <section class="landing-section landing-card insights-section">
+    <div class="section-header">
+      <h2 class="section-title">Coaching Insights</h2>
+      <form method="post" action="/insights/refresh" class="insights-refresh">
+        <button type="submit" class="btn-refresh" title="Generate fresh insights">↻ Refresh</button>
+      </form>
+    </div>
+    <div class="insights-grid">
+      {% for insight in insights %}
+      <div class="insight-card">
+        <span class="insight-number">{{ loop.index }}</span>
+        <p class="insight-text">{{ insight }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% elif stats and stats.rounds_count > 0 %}
+  <section class="landing-section landing-card insights-section">
+    <div class="section-header">
+      <h2 class="section-title">Coaching Insights</h2>
+    </div>
+    <p class="insights-empty">No insights generated yet.</p>
+    <form method="post" action="/insights/refresh" class="insights-refresh insights-refresh--center">
+      <button type="submit" class="btn-refresh">↻ Generate Insights</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <!-- ── Ask the coach (free-form Q&A) ─────────────────── -->
+  {% if qa_enabled and stats and stats.rounds_count > 0 %}
+  <section id="ask" class="landing-section landing-card ask-section">
+    <div class="section-header">
+      <h2 class="section-title">Ask the Coach</h2>
+    </div>
+    <form method="post" action="/ask" class="ask-form">
+      <label for="ask-question" class="ask-form__label">
+        Ask any question about your recent rounds
+      </label>
+      <textarea id="ask-question" name="question" rows="3" class="ask-form__input"
+                placeholder="e.g. Based on my last 5 rounds, what should I improve to drop my HCI by 5?"
+                required></textarea>
+      <button type="submit" class="btn-refresh ask-form__submit">Ask</button>
+    </form>
+    {% if qa_entry %}
+    <div class="ask-answer">
+      <p class="ask-answer__question">
+        <span class="ask-answer__label">You asked:</span>
+        {{ qa_entry.question }}
+      </p>
+      <p class="ask-answer__text">{{ qa_entry.answer }}</p>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if not stats or stats.rounds_count == 0 %}
+  <div class="empty-state">
+    <p>No rounds recorded yet. The coach needs data to work with.</p>
+    <a href="/rounds/new" class="btn-primary">Enter your first round</a>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

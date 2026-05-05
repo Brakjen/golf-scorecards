@@ -7,21 +7,61 @@ from typing import cast
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.settings_repo import SettingsRepository
 from golf_scorecards.web.dependencies import (
-    get_catalog_service,
     get_insights_service,
     get_round_service,
     get_settings_repo,
     get_templates,
 )
-from golf_scorecards.web.routes._helpers import build_home_context
 
 router = APIRouter()
 templates = get_templates()
+
+
+@router.get("/coach", response_class=HTMLResponse)
+async def coach_page(
+    request: Request,
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> HTMLResponse:
+    """Render the coach page with insights and Q&A."""
+    from golf_scorecards.rounds.stats import compute_quick_stats
+
+    summaries = await round_service.list_rounds()
+    stats = None
+    if summaries:
+        stats_rounds = []
+        for s in summaries[:5]:
+            try:
+                stats_rounds.append(await round_service.get_round(s.id))
+            except RoundNotFoundError:
+                continue
+        if stats_rounds:
+            stats = compute_quick_stats(stats_rounds)
+
+    insights: list[str] = []
+    if insights_service is not None:
+        cached = await insights_service.get_cached_insights()
+        if cached:
+            insights = cached
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="coach.html",
+            context={
+                "stats": stats,
+                "insights": insights,
+                "qa_entry": None,
+                "qa_enabled": insights_service is not None,
+            },
+        ),
+    )
 
 
 @router.post("/insights/refresh")
@@ -62,7 +102,7 @@ async def insights_refresh(
         handicap_index=await settings_repo.get("handicap_index"),
         force=True,
     )
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/coach", status_code=303)
 
 
 @router.post("/rounds/{round_id}/insights/refresh")
@@ -99,16 +139,13 @@ async def round_insights_refresh(
 async def ask_dashboard(
     request: Request,
     question: str = Form(default=""),
-    catalog_service: CatalogService = Depends(get_catalog_service),
     round_service: RoundService = Depends(get_round_service),
     insights_service: InsightsService | None = Depends(get_insights_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse | RedirectResponse:
     """Send a free-form coaching question to the LLM with full round context.
 
-    Renders the dashboard with the answer attached. The answer is not
-    persisted across page loads (a refresh of ``/`` clears it) so the
-    user gets a clean slate every time.
+    Renders the coach page with the answer attached.
     """
     if insights_service is None:
         raise HTTPException(
@@ -118,7 +155,7 @@ async def ask_dashboard(
 
     question_clean = question.strip()
     if not question_clean:
-        return RedirectResponse(url="/", status_code=303)
+        return RedirectResponse(url="/coach", status_code=303)
 
     summaries = await round_service.list_rounds()
     if not summaries:
@@ -145,13 +182,23 @@ async def ask_dashboard(
         question_clean,
         handicap_index=await settings_repo.get("handicap_index"),
     )
-    context = await build_home_context(
-        catalog_service, round_service, settings_repo, insights_service,
-    )
-    context["qa_entry"] = qa_entry
+
+    from golf_scorecards.rounds.stats import compute_quick_stats
+
+    stats = compute_quick_stats(rounds) if rounds else None
+    insights: list[str] = []
+    cached = await insights_service.get_cached_insights()
+    if cached:
+        insights = cached
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
-            request=request, name="home.html", context=context,
+            request=request, name="coach.html", context={
+                "stats": stats,
+                "insights": insights,
+                "qa_entry": qa_entry,
+                "qa_enabled": True,
+            },
         ),
     )

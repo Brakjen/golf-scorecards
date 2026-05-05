@@ -14,6 +14,7 @@ from golf_scorecards.web.routes import (
     play,
     rounds,
     settings,
+    stats,
 )
 
 router = APIRouter()
@@ -21,6 +22,7 @@ router.include_router(auth.router)
 router.include_router(dashboard.router)
 router.include_router(play.router)
 router.include_router(rounds.router)
+router.include_router(stats.router)
 router.include_router(coach.router)
 router.include_router(settings.router)
 

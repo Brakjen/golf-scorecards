@@ -683,8 +683,9 @@ tfoot th {
 
 .round-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 14px 20px;
   border: 1px solid var(--rule);
   border-radius: 14px;
@@ -724,6 +725,7 @@ tfoot th {
 
 .round-card__stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -740,6 +742,7 @@ tfoot th {
 .round-card__actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   flex-shrink: 0;
@@ -922,17 +925,13 @@ tfoot th {
   }
 
   .round-card {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .round-card__date {
-    grid-row: auto;
-  }
-
-  .round-card__stats {
-    grid-row: auto;
-    justify-self: start;
+  .round-card__actions {
+    margin-left: 0;
+    width: 100%;
   }
 }
 
@@ -1843,4 +1842,25 @@ body {
   background: var(--accent) !important;
   color: var(--paper) !important;
   border-color: var(--accent) !important;
+}
+
+/* ── Page titles ─────────────────────────────────────── */
+.page-title {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-family: var(--font-heading);
+}
+
+.hci-form--page {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hci-form--page .hci-input {
+  max-width: 6rem;
+}
+
+.logout-form {
+  margin-top: 0.5rem;
 }

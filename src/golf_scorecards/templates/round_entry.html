@@ -18,7 +18,7 @@
         {% if round.playing_handicap is not none %} · PH {{ round.playing_handicap }}{% endif %}
       </p>
     </div>
-    <a href="/rounds/new" class="btn-back">← New round</a>
+    <a href="/rounds/{{ round.id }}/play" class="btn-back">← Play view</a>
   </div>
 
   <form method="post" action="/rounds/{{ round.id }}" class="entry-form">
