@@ -697,6 +697,8 @@ tfoot th {
   text-decoration: none;
   color: var(--ink);
   transition: border-color 0.15s, background 0.15s;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .round-card:hover {
@@ -931,6 +933,19 @@ tfoot th {
   .round-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .round-card__course {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .round-card__date {
+    white-space: normal;
+  }
+
+  .round-card__stats {
+    width: 100%;
   }
 
   .round-card__actions {
