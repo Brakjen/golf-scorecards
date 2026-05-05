@@ -235,14 +235,23 @@ def _tile_state(hole: RoundHole) -> str:
     """Return tile colour state: 'empty' / 'partial' / 'done'.
 
     - empty:   no score recorded
-    - partial: score recorded but no putts
-    - done:    score AND putts recorded
+    - partial: score recorded but not all key metrics filled
+    - done:    score, putts, AND short-game/trouble fields recorded
+
+    A hole is "done" when score, putts, penalty_strokes, and nfs are all
+    explicitly set (not None).  The boolean toggles (sz_in_reg, up_and_down,
+    down_in_3) default to unchecked which is a valid state, so they don't
+    gate completion.
     """
     if hole.score is None:
         return "empty"
-    if hole.putts is None:
-        return "partial"
-    return "done"
+    if (
+        hole.putts is not None
+        and hole.penalty_strokes is not None
+        and hole.nfs is not None
+    ):
+        return "done"
+    return "partial"
 
 
 @router.get("/rounds/{round_id}/play", response_class=HTMLResponse)

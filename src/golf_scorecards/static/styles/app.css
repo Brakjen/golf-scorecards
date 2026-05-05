@@ -1617,12 +1617,12 @@ body {
 }
 
 .play-tile--partial {
-  border-color: #c79a3a;
-  background: rgba(199, 154, 58, 0.10);
+  border-color: #c470b8;
+  background: rgba(196, 112, 184, 0.10);
 }
 
 .play-tile--partial .play-tile__score {
-  color: #e0b558;
+  color: #d88acf;
 }
 
 .play-tile--done {

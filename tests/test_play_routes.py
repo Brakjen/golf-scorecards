@@ -92,13 +92,13 @@ def test_play_hole_save_persists_and_redirects_to_grid(
     rid = _create_round(client)
     resp = client.post(
         f"/rounds/{rid}/play/3",
-        data={"score": "4", "putts": "2", "action": "grid"},
+        data={"score": "4", "putts": "2", "penalty": "0", "nfs": "0", "action": "grid"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == f"/rounds/{rid}/play"
 
-    # Tile for hole 3 should now show 'done' state (score + putts)
+    # Tile for hole 3 should now show 'done' state (all key metrics filled)
     grid = client.get(f"/rounds/{rid}/play")
     assert "play-tile--done" in grid.text
 
@@ -109,7 +109,7 @@ def test_play_hole_save_with_action_next_redirects_to_next_hole(
     rid = _create_round(client)
     resp = client.post(
         f"/rounds/{rid}/play/5",
-        data={"score": "4", "putts": "2", "action": "next"},
+        data={"score": "4", "putts": "2", "penalty": "0", "nfs": "0", "action": "next"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -121,6 +121,20 @@ def test_partial_state_when_only_score_entered(client: TestClient) -> None:
     client.post(
         f"/rounds/{rid}/play/1",
         data={"score": "4", "action": "grid"},
+        follow_redirects=False,
+    )
+    grid = client.get(f"/rounds/{rid}/play")
+    assert "play-tile--partial" in grid.text
+
+
+def test_partial_state_when_score_and_putts_but_not_trouble(
+    client: TestClient,
+) -> None:
+    """Score + putts without penalty/nfs should still be partial (pink)."""
+    rid = _create_round(client)
+    client.post(
+        f"/rounds/{rid}/play/2",
+        data={"score": "5", "putts": "2", "action": "grid"},
         follow_redirects=False,
     )
     grid = client.get(f"/rounds/{rid}/play")
