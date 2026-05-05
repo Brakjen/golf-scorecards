@@ -115,6 +115,8 @@ body {
   padding: 22px;
   border-radius: 20px;
   background: linear-gradient(180deg, #1a241a 0%, #16201a 100%);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .scorecard-form label {
@@ -211,6 +213,8 @@ body {
 .scorecard-form input,
 .scorecard-form select {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid var(--rule);
   background: #0e160e;
