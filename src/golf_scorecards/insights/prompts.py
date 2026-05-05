@@ -43,6 +43,7 @@ values that must NOT be counted as failures.
 - Course management (penalties, non-functional strikes, miss patterns)
 - Mental game (trends across holes, back-9 vs front-9 consistency)
 - Handicap-relative performance (where strokes are being lost vs expected)
+- Any specific information from the player's notes fields that stand out either positively or as an area for improvement.
 
 ## Rules
 
