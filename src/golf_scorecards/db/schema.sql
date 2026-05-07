@@ -49,3 +49,20 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS practice_sessions (
+    id              TEXT PRIMARY KEY,
+    session_date    TEXT NOT NULL,
+    notes           TEXT,
+    created_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS practice_attempts (
+    id              TEXT PRIMARY KEY,
+    session_id      TEXT NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
+    station_slug    TEXT NOT NULL,
+    attempt_number  INTEGER NOT NULL,
+    strokes         INTEGER NOT NULL,
+    nfs             INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(session_id, station_slug, attempt_number)
+);
