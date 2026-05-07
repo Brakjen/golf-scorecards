@@ -39,7 +39,7 @@ def test_create_round(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     r = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course,
             tee=tee,
             round_date=date(2026, 4, 25),
@@ -64,13 +64,13 @@ def test_get_round(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     created = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
         )
     )
 
     fetched = asyncio.get_event_loop().run_until_complete(
-        round_service.get_round(created.id)
+        round_service.get_round(created.id, "test-user")
     )
 
     assert fetched.id == created.id
@@ -82,7 +82,7 @@ def test_get_round_not_found(round_service: RoundService) -> None:
     """Getting a non-existent round raises RoundNotFoundError."""
     with pytest.raises(RoundNotFoundError):
         asyncio.get_event_loop().run_until_complete(
-            round_service.get_round("nonexistent")
+            round_service.get_round("nonexistent", "test-user")
         )
 
 
@@ -94,7 +94,7 @@ def test_save_holes(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     created = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
         )
     )
@@ -114,7 +114,7 @@ def test_save_holes(
     ]
 
     updated = asyncio.get_event_loop().run_until_complete(
-        round_service.save_holes(created.id, updated_holes)
+        round_service.save_holes(created.id, updated_holes, "test-user")
     )
 
     assert updated.holes[0].score == updated.holes[0].par + 1
@@ -130,7 +130,7 @@ def test_list_rounds(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     created = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
         )
     )
@@ -145,11 +145,11 @@ def test_list_rounds(
         for h in created.holes
     ]
     asyncio.get_event_loop().run_until_complete(
-        round_service.save_holes(created.id, holes_with_scores)
+        round_service.save_holes(created.id, holes_with_scores, "test-user")
     )
 
     summaries = asyncio.get_event_loop().run_until_complete(
-        round_service.list_rounds()
+        round_service.list_rounds("test-user")
     )
 
     assert len(summaries) == 1
@@ -166,18 +166,18 @@ def test_delete_round(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     created = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
         )
     )
 
     asyncio.get_event_loop().run_until_complete(
-        round_service.delete_round(created.id)
+        round_service.delete_round(created.id, "test-user")
     )
 
     with pytest.raises(RoundNotFoundError):
         asyncio.get_event_loop().run_until_complete(
-            round_service.get_round(created.id)
+            round_service.get_round(created.id, "test-user")
         )
 
 
@@ -185,7 +185,7 @@ def test_delete_round_not_found(round_service: RoundService) -> None:
     """Deleting a non-existent round raises RoundNotFoundError."""
     with pytest.raises(RoundNotFoundError):
         asyncio.get_event_loop().run_until_complete(
-            round_service.delete_round("nonexistent")
+            round_service.delete_round("nonexistent", "test-user")
         )
 
 
@@ -197,7 +197,7 @@ def test_create_front_9_round(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     r = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
             holes_played="front_9",
         )
@@ -217,7 +217,7 @@ def test_create_back_9_round(
     tee = catalog_service.get_tee("sola-golfklubb-forus", "58")
 
     r = asyncio.get_event_loop().run_until_complete(
-        round_service.create_round(
+        round_service.create_round(user_id="test-user", 
             course=course, tee=tee, round_date=date(2026, 4, 25),
             holes_played="back_9",
         )

@@ -31,7 +31,7 @@ class RoundRepository:
 
     # ── Create ───────────────────────────────────────────
 
-    async def create_round(self, r: Round) -> None:
+    async def create_round(self, r: Round, user_id: str) -> None:
         """Insert a round and its pre-built hole rows in a single transaction.
 
         The round's holes are inserted with only the static course snapshot
@@ -40,18 +40,19 @@ class RoundRepository:
 
         Args:
             r: The fully-populated round including its hole list.
+            user_id: The ID of the user who owns this round.
         """
         conn = await self._conn()
         try:
             await conn.execute(
                 """INSERT INTO rounds (
-                    id, course_slug, tee_name, player_name, round_date,
+                    id, user_id, course_slug, tee_name, player_name, round_date,
                     handicap_index, handicap_profile, playing_handicap,
                     course_rating, slope_rating, scoring_mode, target_score,
                     holes_played, course_snapshot, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    r.id, r.course_slug, r.tee_name, r.player_name,
+                    r.id, user_id, r.course_slug, r.tee_name, r.player_name,
                     r.round_date.isoformat(), r.handicap_index,
                     r.handicap_profile, r.playing_handicap,
                     r.course_rating, r.slope_rating, r.scoring_mode,
@@ -72,19 +73,22 @@ class RoundRepository:
 
     # ── Read ─────────────────────────────────────────────
 
-    async def get_round(self, round_id: str) -> Round | None:
+    async def get_round(self, round_id: str, user_id: str) -> Round | None:
         """Fetch a single round with all hole data.
 
         Args:
             round_id: The unique round identifier.
+            user_id: The ID of the user who owns this round.
 
         Returns:
             The full ``Round`` with holes ordered by hole number, or ``None``
-            if no round with the given ID exists.
+            if no round with the given ID exists for this user.
         """
         conn = await self._conn()
         try:
-            cursor = await conn.execute("SELECT * FROM rounds WHERE id = ?", (round_id,))
+            cursor = await conn.execute(
+                "SELECT * FROM rounds WHERE id = ? AND user_id = ?", (round_id, user_id)
+            )
             row = await cursor.fetchone()
             if row is None:
                 return None
@@ -93,11 +97,14 @@ class RoundRepository:
         finally:
             await conn.close()
 
-    async def list_rounds(self) -> list[RoundSummary]:
+    async def list_rounds(self, user_id: str) -> list[RoundSummary]:
         """Return all rounds as lightweight summaries, newest first.
 
         Computes aggregate statistics (total score, total putts, GIR count)
         via correlated subqueries so that full hole data is not loaded.
+
+        Args:
+            user_id: The ID of the user whose rounds to list.
 
         Returns:
             A list of ``RoundSummary`` objects ordered by round date
@@ -117,7 +124,9 @@ class RoundRepository:
                      WHERE rh.round_id = r.id AND rh.down_in_3 IS NOT NULL) AS d3_count,
                     (SELECT COUNT(*) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.putts >= 3) AS three_putt_count
-                FROM rounds r ORDER BY r.round_date DESC, r.created_at DESC""",
+                FROM rounds r WHERE r.user_id = ?
+                ORDER BY r.round_date DESC, r.created_at DESC""",
+                (user_id,),
             )
             rows = await cursor.fetchall()
             return [
@@ -223,19 +232,22 @@ class RoundRepository:
         finally:
             await conn.close()
 
-    async def delete_round(self, round_id: str) -> bool:
+    async def delete_round(self, round_id: str, user_id: str) -> bool:
         """Delete a round and its holes via ``ON DELETE CASCADE``.
 
         Args:
             round_id: The unique round identifier.
+            user_id: The ID of the user who owns this round.
 
         Returns:
             ``True`` if a round was deleted, ``False`` if no round with
-            the given ID existed.
+            the given ID existed for this user.
         """
         conn = await self._conn()
         try:
-            cursor = await conn.execute("DELETE FROM rounds WHERE id = ?", (round_id,))
+            cursor = await conn.execute(
+                "DELETE FROM rounds WHERE id = ? AND user_id = ?", (round_id, user_id)
+            )
             await conn.commit()
             return cursor.rowcount > 0
         finally:

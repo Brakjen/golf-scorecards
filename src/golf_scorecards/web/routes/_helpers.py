@@ -87,6 +87,7 @@ async def build_home_context(
     round_service: RoundService,
     settings_repo: SettingsRepository,
     insights_service: InsightsService | None,
+    user_id: str,
 ) -> dict[str, Any]:
     """Assemble the template context shared by the dashboard render paths.
 
@@ -98,10 +99,10 @@ async def build_home_context(
     initial_course = course_options[0]
     initial_tee = initial_course["tees"][0]
 
-    summaries = await round_service.list_rounds()
+    summaries = await round_service.list_rounds(user_id)
     recent = summaries[:3]
 
-    handicap_index = await settings_repo.get("handicap_index")
+    handicap_index = await settings_repo.get("handicap_index", user_id)
 
     stats = None
     trends = None
@@ -110,7 +111,7 @@ async def build_home_context(
         stats_rounds = []
         for s in summaries[:20]:
             try:
-                r = await round_service.get_round(s.id)
+                r = await round_service.get_round(s.id, user_id)
                 stats_rounds.append(r)
             except RoundNotFoundError:
                 continue

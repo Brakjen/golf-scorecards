@@ -60,6 +60,7 @@ async def round_create_form(
 
 @router.post("/rounds")
 async def round_create(
+    request: Request,
     course_slug: str = Form(),
     tee_name: str = Form(),
     player_name: str = Form(default=""),
@@ -82,7 +83,7 @@ async def round_create(
     parsed_date = date.fromisoformat(round_date) if round_date else date.today()
     parsed_name = player_name.strip() or None
 
-    hci_raw = await settings_repo.get("handicap_index")
+    hci_raw = await settings_repo.get("handicap_index", request.state.user.id)
     hci = float(hci_raw) if hci_raw else None
 
     playing_hc: int | None = None
@@ -103,6 +104,7 @@ async def round_create(
         course=course,
         tee=tee,
         round_date=parsed_date,
+        user_id=request.state.user.id,
         player_name=parsed_name,
         handicap_index=hci,
         handicap_profile="men",
@@ -122,7 +124,7 @@ async def round_entry_form(
 ) -> HTMLResponse:
     """Render the spreadsheet-style hole entry form for an existing round."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -157,7 +159,7 @@ async def round_save(
 ) -> RedirectResponse:
     """Save hole-by-hole metric data from the entry form."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -201,7 +203,7 @@ async def round_save(
             )
         )
 
-    await round_service.save_holes(round_id, holes)
+    await round_service.save_holes(round_id, holes, request.state.user.id)
 
     hci_raw = str(form.get("handicap_index", "") or "").strip()
     new_hci = float(hci_raw) if hci_raw else None
@@ -221,6 +223,7 @@ async def round_save(
             sr_val = comp.tee_rating.slope_rating
         await round_service.update_handicap(
             round_id, new_hci, playing_hc, cr, sr_val,
+            user_id=request.state.user.id,
         )
 
     return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
@@ -262,7 +265,7 @@ async def round_play_grid(
 ) -> HTMLResponse:
     """Render the 6×3 grid of hole tiles for on-course play."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -304,7 +307,7 @@ async def round_play_hole(
 ) -> HTMLResponse:
     """Render the swipeable per-hole guide (4 panels)."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -368,7 +371,7 @@ async def round_play_hole_save(
 ) -> RedirectResponse:
     """Save a single hole's metrics, then redirect to next hole or grid."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -417,7 +420,7 @@ async def round_play_hole_save(
         notes=_str("notes"),
     )
     new_holes = [updated_hole if h.hole_number == hole_number else h for h in r.holes]
-    await round_service.save_holes(round_id, new_holes)
+    await round_service.save_holes(round_id, new_holes, request.state.user.id)
 
     action = str(form.get("action", "grid"))
     played_numbers = sorted(h.hole_number for h in r.holes)

@@ -33,6 +33,7 @@ class RoundService:
         course: Course,
         tee: Tee,
         round_date: date,
+        user_id: str,
         player_name: str | None = None,
         handicap_index: float | None = None,
         handicap_profile: str | None = None,
@@ -128,10 +129,10 @@ class RoundService:
             holes=holes,
         )
 
-        await self._repo.create_round(r)
+        await self._repo.create_round(r, user_id=user_id)
         return r
 
-    async def get_round(self, round_id: str) -> Round:
+    async def get_round(self, round_id: str, user_id: str) -> Round:
         """Retrieve a round by ID.
 
         Args:
@@ -143,21 +144,24 @@ class RoundService:
         Raises:
             RoundNotFoundError: If no round with the given ID exists.
         """
-        r = await self._repo.get_round(round_id)
+        r = await self._repo.get_round(round_id, user_id)
         if r is None:
             raise RoundNotFoundError(f"Round not found: {round_id}")
         return r
 
-    async def list_rounds(self) -> list[RoundSummary]:
+    async def list_rounds(self, user_id: str) -> list[RoundSummary]:
         """Return all rounds as lightweight summaries, newest first.
+
+        Args:
+            user_id: The ID of the user whose rounds to list.
 
         Returns:
             A list of ``RoundSummary`` objects with aggregated statistics,
             ordered by round date descending.
         """
-        return await self._repo.list_rounds()
+        return await self._repo.list_rounds(user_id)
 
-    async def save_holes(self, round_id: str, holes: list[RoundHole]) -> Round:
+    async def save_holes(self, round_id: str, holes: list[RoundHole], user_id: str) -> Round:
         """Save hole metric data and return the updated round.
 
         Verifies the round exists, persists the updated hole metrics, then
@@ -166,6 +170,7 @@ class RoundService:
         Args:
             round_id: The unique round identifier.
             holes: List of hole records with player-entered metric values.
+            user_id: The ID of the user who owns this round.
 
         Returns:
             The updated ``Round`` with saved hole data.
@@ -173,11 +178,11 @@ class RoundService:
         Raises:
             RoundNotFoundError: If no round with the given ID exists.
         """
-        existing = await self._repo.get_round(round_id)
+        existing = await self._repo.get_round(round_id, user_id)
         if existing is None:
             raise RoundNotFoundError(f"Round not found: {round_id}")
         await self._repo.save_holes(round_id, holes)
-        updated = await self._repo.get_round(round_id)
+        updated = await self._repo.get_round(round_id, user_id)
         assert updated is not None
         return updated
 
@@ -188,6 +193,7 @@ class RoundService:
         playing_handicap: int | None,
         course_rating: float | None = None,
         slope_rating: int | None = None,
+        user_id: str = "",
     ) -> Round:
         """Update handicap fields on an existing round.
 
@@ -197,6 +203,7 @@ class RoundService:
             playing_handicap: Computed playing handicap for this tee.
             course_rating: Course rating (optional).
             slope_rating: Slope rating (optional).
+            user_id: The ID of the user who owns this round.
 
         Returns:
             The updated ``Round``.
@@ -204,26 +211,27 @@ class RoundService:
         Raises:
             RoundNotFoundError: If no round with the given ID exists.
         """
-        existing = await self._repo.get_round(round_id)
+        existing = await self._repo.get_round(round_id, user_id)
         if existing is None:
             raise RoundNotFoundError(f"Round not found: {round_id}")
         await self._repo.update_handicap(
             round_id, handicap_index, playing_handicap,
             course_rating, slope_rating,
         )
-        updated = await self._repo.get_round(round_id)
+        updated = await self._repo.get_round(round_id, user_id)
         assert updated is not None
         return updated
 
-    async def delete_round(self, round_id: str) -> None:
+    async def delete_round(self, round_id: str, user_id: str) -> None:
         """Delete a round and all its hole data.
 
         Args:
             round_id: The unique round identifier.
+            user_id: The ID of the user who owns this round.
 
         Raises:
             RoundNotFoundError: If no round with the given ID exists.
         """
-        deleted = await self._repo.delete_round(round_id)
+        deleted = await self._repo.delete_round(round_id, user_id)
         if not deleted:
             raise RoundNotFoundError(f"Round not found: {round_id}")

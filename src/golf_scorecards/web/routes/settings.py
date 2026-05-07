@@ -20,7 +20,7 @@ async def settings_page(
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse:
     """Render the settings page."""
-    handicap_index = await settings_repo.get("handicap_index")
+    handicap_index = await settings_repo.get("handicap_index", request.state.user.id)
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -33,11 +33,12 @@ async def settings_page(
 
 @router.post("/settings/handicap")
 async def update_handicap_index(
+    request: Request,
     handicap_index: str = Form(default=""),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> RedirectResponse:
     """Update the player's stored handicap index."""
     value = handicap_index.strip()
     if value:
-        await settings_repo.set("handicap_index", value)
+        await settings_repo.set("handicap_index", value, request.state.user.id)
     return RedirectResponse(url="/settings", status_code=303)

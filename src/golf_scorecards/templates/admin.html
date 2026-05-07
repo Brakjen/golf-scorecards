@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Admin · Golf Scorecards{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <header class="page-header">
+    <h1>Admin</h1>
+    <p class="muted">Manage users and impersonate.</p>
+  </header>
+
+  <section class="admin-users">
+    <h2>Users ({{ users|length }})</h2>
+    <ul class="admin-user-list">
+      {% for u in users %}
+      <li class="admin-user-item{% if u.id == impersonating_id %} is-impersonating{% endif %}">
+        <div class="admin-user-info">
+          <strong>{{ u.display_name }}</strong>
+          <span class="muted">@{{ u.username }}</span>
+          {% if u.is_admin %}<span class="badge badge--admin">admin</span>{% endif %}
+          <span class="muted small">joined {{ u.created_at.strftime('%Y-%m-%d') }}</span>
+        </div>
+        <div class="admin-user-actions">
+          {% if u.id == impersonating_id %}
+          <form method="post" action="/admin/stop-impersonating">
+            <button type="submit" class="btn btn--sm btn--outline">Stop</button>
+          </form>
+          {% elif u.id != admin_user.id %}
+          <form method="post" action="/admin/impersonate/{{ u.id }}">
+            <button type="submit" class="btn btn--sm">View as</button>
+          </form>
+          {% else %}
+          <span class="muted small">you</span>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if orphaned_count > 0 %}
+  <section class="admin-orphans">
+    <h2>Unclaimed data</h2>
+    <p class="muted">{{ orphaned_count }} record{{ 's' if orphaned_count != 1 }} with no owner (from before multi-user was enabled).</p>
+    <p>Assign to:</p>
+    <div class="admin-orphans__actions">
+      {% for u in users %}
+      <form method="post" action="/admin/claim-data/{{ u.id }}" style="display:inline">
+        <button type="submit" class="btn btn--sm">{{ u.display_name }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

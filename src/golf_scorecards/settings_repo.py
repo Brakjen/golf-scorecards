@@ -25,11 +25,12 @@ class SettingsRepository:
         """
         return await get_connection(self._db_path)
 
-    async def get(self, key: str) -> str | None:
-        """Retrieve a setting value by key.
+    async def get(self, key: str, user_id: str = "") -> str | None:
+        """Retrieve a setting value by key and user.
 
         Args:
             key: The setting key.
+            user_id: The user ID scope (empty string for global settings).
 
         Returns:
             The stored value string, or ``None`` if the key does not exist.
@@ -37,26 +38,27 @@ class SettingsRepository:
         conn = await self._conn()
         try:
             cursor = await conn.execute(
-                "SELECT value FROM settings WHERE key = ?", (key,),
+                "SELECT value FROM settings WHERE key = ? AND user_id = ?", (key, user_id),
             )
             row = await cursor.fetchone()
             return row["value"] if row else None
         finally:
             await conn.close()
 
-    async def set(self, key: str, value: str) -> None:
+    async def set(self, key: str, value: str, user_id: str = "") -> None:
         """Create or update a setting.
 
         Args:
             key: The setting key.
             value: The value to store.
+            user_id: The user ID scope (empty string for global settings).
         """
         conn = await self._conn()
         try:
             await conn.execute(
-                "INSERT INTO settings (key, value) VALUES (?, ?) "
-                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                (key, value),
+                "INSERT INTO settings (key, user_id, value) VALUES (?, ?, ?) "
+                "ON CONFLICT(key, user_id) DO UPDATE SET value = excluded.value",
+                (key, user_id, value),
             )
             await conn.commit()
         finally:

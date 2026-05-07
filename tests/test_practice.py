@@ -92,7 +92,7 @@ def service(db_path):
 
 @pytest.mark.asyncio
 async def test_create_session(service: PracticeService) -> None:
-    session = await service.create_session(session_date=date(2025, 7, 1))
+    session = await service.create_session("test-user", session_date=date(2025, 7, 1))
     assert session.id
     assert session.session_date == date(2025, 7, 1)
     assert session.attempts == []
@@ -100,8 +100,8 @@ async def test_create_session(service: PracticeService) -> None:
 
 @pytest.mark.asyncio
 async def test_get_session(service: PracticeService) -> None:
-    session = await service.create_session(session_date=date(2025, 7, 1))
-    fetched = await service.get_session(session.id)
+    session = await service.create_session("test-user", session_date=date(2025, 7, 1))
+    fetched = await service.get_session(session.id, "test-user")
     assert fetched.id == session.id
     assert fetched.session_date == date(2025, 7, 1)
 
@@ -109,12 +109,12 @@ async def test_get_session(service: PracticeService) -> None:
 @pytest.mark.asyncio
 async def test_get_session_not_found(service: PracticeService) -> None:
     with pytest.raises(PracticeSessionNotFoundError):
-        await service.get_session("nonexistent")
+        await service.get_session("nonexistent", "test-user")
 
 
 @pytest.mark.asyncio
 async def test_record_attempt(service: PracticeService) -> None:
-    session = await service.create_session(session_date=date(2025, 7, 1))
+    session = await service.create_session("test-user", session_date=date(2025, 7, 1))
     attempt = await service.record_attempt(
         session_id=session.id,
         station_slug="putt-medium",
@@ -124,14 +124,14 @@ async def test_record_attempt(service: PracticeService) -> None:
     assert attempt.strokes == 2
     assert attempt.station_slug == "putt-medium"
 
-    fetched = await service.get_session(session.id)
+    fetched = await service.get_session(session.id, "test-user")
     assert len(fetched.attempts) == 1
     assert fetched.attempts[0].strokes == 2
 
 
 @pytest.mark.asyncio
 async def test_record_attempt_invalid_station(service: PracticeService) -> None:
-    session = await service.create_session()
+    session = await service.create_session("test-user", )
     with pytest.raises(KeyError):
         await service.record_attempt(
             session_id=session.id,
@@ -143,9 +143,9 @@ async def test_record_attempt_invalid_station(service: PracticeService) -> None:
 
 @pytest.mark.asyncio
 async def test_list_sessions(service: PracticeService) -> None:
-    await service.create_session(session_date=date(2025, 7, 1))
-    await service.create_session(session_date=date(2025, 7, 2))
-    summaries = await service.list_sessions()
+    await service.create_session("test-user", session_date=date(2025, 7, 1))
+    await service.create_session("test-user", session_date=date(2025, 7, 2))
+    summaries = await service.list_sessions("test-user")
     assert len(summaries) == 2
     # Newest first
     assert summaries[0].session_date == date(2025, 7, 2)
@@ -153,27 +153,27 @@ async def test_list_sessions(service: PracticeService) -> None:
 
 @pytest.mark.asyncio
 async def test_list_sessions_with_attempts(service: PracticeService) -> None:
-    session = await service.create_session(session_date=date(2025, 7, 1))
+    session = await service.create_session("test-user", session_date=date(2025, 7, 1))
     await service.record_attempt(session.id, "putt-medium", 1, strokes=2)
     await service.record_attempt(session.id, "putt-medium", 2, strokes=3)
-    summaries = await service.list_sessions()
+    summaries = await service.list_sessions("test-user")
     assert summaries[0].total_strokes == 5
     assert summaries[0].total_attempts == 2
 
 
 @pytest.mark.asyncio
 async def test_delete_session(service: PracticeService) -> None:
-    session = await service.create_session()
+    session = await service.create_session("test-user", )
     await service.record_attempt(session.id, "putt-medium", 1, strokes=2)
-    await service.delete_session(session.id)
+    await service.delete_session(session.id, "test-user")
     with pytest.raises(PracticeSessionNotFoundError):
-        await service.get_session(session.id)
+        await service.get_session(session.id, "test-user")
 
 
 @pytest.mark.asyncio
 async def test_delete_session_not_found(service: PracticeService) -> None:
     with pytest.raises(PracticeSessionNotFoundError):
-        await service.delete_session("nonexistent")
+        await service.delete_session("nonexistent", "test-user")
 
 
 # ── Stats tests ───────────────────────────────────────────────────────────

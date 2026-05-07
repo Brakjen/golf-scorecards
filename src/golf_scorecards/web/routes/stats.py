@@ -28,7 +28,7 @@ async def stats_page(
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse:
     """Render the stats page with quick stats and trend charts."""
-    summaries = await round_service.list_rounds()
+    summaries = await round_service.list_rounds(request.state.user.id)
 
     stats = None
     trends = None
@@ -36,7 +36,7 @@ async def stats_page(
         stats_rounds = []
         for s in summaries[:20]:
             try:
-                stats_rounds.append(await round_service.get_round(s.id))
+                stats_rounds.append(await round_service.get_round(s.id, request.state.user.id))
             except RoundNotFoundError:
                 continue
         if stats_rounds:

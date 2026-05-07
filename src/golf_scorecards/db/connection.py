@@ -82,6 +82,42 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE practice_sessions ADD COLUMN title TEXT")
         conn.commit()
 
+    # Multi-user: add user_id columns
+    if "user_id" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
+        conn.commit()
+    if practice_cols and "user_id" not in practice_cols:
+        conn.execute(
+            "ALTER TABLE practice_sessions ADD COLUMN user_id TEXT NOT NULL DEFAULT ''"
+        )
+        conn.commit()
+
+    # Settings: recreate with composite PK if needed
+    settings_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(settings)").fetchall()
+    }
+    if settings_cols and "user_id" not in settings_cols:
+        conn.execute("""CREATE TABLE IF NOT EXISTS settings_new (
+            key     TEXT NOT NULL,
+            user_id TEXT NOT NULL DEFAULT '',
+            value   TEXT NOT NULL,
+            PRIMARY KEY (key, user_id)
+        )""")
+        conn.execute("INSERT OR IGNORE INTO settings_new (key, value) SELECT key, value FROM settings")
+        conn.execute("DROP TABLE settings")
+        conn.execute("ALTER TABLE settings_new RENAME TO settings")
+        conn.commit()
+
+    # Users: add is_admin column
+    user_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()
+    }
+    if user_cols and "is_admin" not in user_cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

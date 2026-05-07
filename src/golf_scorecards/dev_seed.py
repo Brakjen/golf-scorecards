@@ -11,8 +11,16 @@ import json
 import random
 import sqlite3
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, UTC
 from pathlib import Path
+
+from argon2 import PasswordHasher
+
+# Default dev user credentials
+DEV_USER_ID = "00000000000000000000000000000001"
+DEV_USERNAME = "dev"
+DEV_PASSWORD = "dev123"
+DEV_DISPLAY_NAME = "Dev Player"
 
 
 # ── Course data (Forus tee 63) ──────────────────────────────────────────
@@ -310,11 +318,24 @@ def seed_database(db_path: str) -> None:
 
     conn = sqlite3.connect(db_path)
     try:
+        _seed_user(conn)
         _seed_rounds(conn)
         _seed_practice_sessions(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def _seed_user(conn: sqlite3.Connection) -> None:
+    """Create the default dev user with admin privileges."""
+    ph = PasswordHasher()
+    password_hash = ph.hash(DEV_PASSWORD)
+    now = datetime.now(tz=UTC).isoformat()
+    conn.execute(
+        """INSERT OR IGNORE INTO users (id, username, password_hash, display_name, is_admin, created_at)
+           VALUES (?, ?, ?, ?, 1, ?)""",
+        (DEV_USER_ID, DEV_USERNAME, password_hash, DEV_DISPLAY_NAME, now),
+    )
 
 
 def _seed_rounds(conn: sqlite3.Connection) -> None:
@@ -341,13 +362,13 @@ def _seed_rounds(conn: sqlite3.Connection) -> None:
 
         conn.execute(
             """INSERT INTO rounds
-               (id, course_slug, tee_name, player_name, round_date,
+               (id, user_id, course_slug, tee_name, player_name, round_date,
                 handicap_index, handicap_profile, playing_handicap,
                 course_rating, slope_rating, scoring_mode, target_score,
                 holes_played, course_snapshot, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                round_id, "sola-golfklubb-forus", "63", "Dev Player",
+                round_id, DEV_USER_ID, "sola-golfklubb-forus", "63", "Dev Player",
                 round_date.isoformat(), player_hcp, "men", playing_hcp,
                 COURSE_RATING, SLOPE_RATING, "stroke", None,
                 "18", COURSE_SNAPSHOT, now, now,
@@ -402,9 +423,9 @@ def _seed_practice_sessions(conn: sqlite3.Connection) -> None:
         notes = random.choice(notes_pool)
 
         conn.execute(
-            """INSERT INTO practice_sessions (id, title, session_date, notes, created_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (session_id, title, session_date.isoformat(), notes, now),
+            """INSERT INTO practice_sessions (id, user_id, title, session_date, notes, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (session_id, DEV_USER_ID, title, session_date.isoformat(), notes, now),
         )
 
         # Some sessions are incomplete (skip some stations)

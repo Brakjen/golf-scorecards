@@ -31,7 +31,7 @@ async def practice_list(
     Returns:
         An HTML response rendering ``practice_list.html``.
     """
-    sessions = await service.list_sessions()
+    sessions = await service.list_sessions(request.state.user.id)
     return templates.TemplateResponse(
         request=request,
         name="practice_list.html",
@@ -41,6 +41,7 @@ async def practice_list(
 
 @router.post("/practice")
 async def practice_create(
+    request: Request,
     title: str = Form(""),
     notes: str = Form(""),
     service: PracticeService = Depends(get_practice_service),
@@ -60,6 +61,7 @@ async def practice_create(
         A 303 redirect to ``/practice/{session_id}``.
     """
     session = await service.create_session(
+        user_id=request.state.user.id,
         title=title.strip() or None,
         notes=notes.strip() or None,
     )
@@ -84,7 +86,7 @@ async def practice_visualize(
     Returns:
         An HTML response rendering ``practice_visualize.html``.
     """
-    viz_stats = await service.compute_visualization_stats()
+    viz_stats = await service.compute_visualization_stats(request.state.user.id)
     return templates.TemplateResponse(
         request=request,
         name="practice_visualize.html",
@@ -171,7 +173,7 @@ async def practice_station_view(
     Returns:
         An HTML response rendering ``practice_station.html``.
     """
-    session = await service.get_session(session_id)
+    session = await service.get_session(session_id, request.state.user.id)
     station = get_station(station_slug)
     station_idx = next(i for i, s in enumerate(STATIONS) if s.slug == station_slug)
 
@@ -196,6 +198,7 @@ async def practice_station_view(
 
 @router.post("/practice/{session_id}/delete")
 async def practice_delete_session(
+    request: Request,
     session_id: str,
     service: PracticeService = Depends(get_practice_service),
 ) -> RedirectResponse:
@@ -208,7 +211,7 @@ async def practice_delete_session(
     Returns:
         A 303 redirect to the practice list page.
     """
-    await service.delete_session(session_id)
+    await service.delete_session(session_id, request.state.user.id)
     return RedirectResponse(url="/practice", status_code=303)
 
 
@@ -236,7 +239,7 @@ async def practice_summary(
     Raises:
         PracticeSessionNotFoundError: If no session exists with the given ID.
     """
-    session = await service.get_session(session_id)
+    session = await service.get_session(session_id, request.state.user.id)
     stats = service.compute_stats(session)
     return templates.TemplateResponse(
         request=request,

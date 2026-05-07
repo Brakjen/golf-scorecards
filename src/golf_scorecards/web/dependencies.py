@@ -5,6 +5,8 @@ from importlib.resources import files
 
 from starlette.templating import Jinja2Templates
 
+from golf_scorecards.auth.repository import UserRepository
+from golf_scorecards.auth.service import AuthService
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.config import get_settings
@@ -95,3 +97,18 @@ def get_practice_service() -> PracticeService:
     """
     settings = get_settings()
     return PracticeService(repository=PracticeRepository(db_path=settings.db_path))
+
+
+@lru_cache(maxsize=1)
+def get_auth_service() -> AuthService:
+    """Return the singleton auth service.
+
+    Returns:
+        An ``AuthService`` backed by a ``UserRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return AuthService(
+        user_repo=UserRepository(db_path=settings.db_path),
+        invite_code=settings.invite_code,
+    )

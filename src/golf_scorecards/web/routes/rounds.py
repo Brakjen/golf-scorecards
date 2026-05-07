@@ -35,12 +35,13 @@ async def round_list(
     round_service: RoundService = Depends(get_round_service),
 ) -> HTMLResponse:
     """Render the round history list."""
-    summaries = await round_service.list_rounds()
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
 
     round_stableford: dict[str, int] = {}
     for s in summaries:
         try:
-            r = await round_service.get_round(s.id)
+            r = await round_service.get_round(s.id, user_id)
             pts = total_stableford(r)
             if pts is not None:
                 round_stableford[r.id] = pts
@@ -66,7 +67,7 @@ async def round_detail(
 ) -> HTMLResponse:
     """Render the read-only detail view for a saved round."""
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -133,7 +134,7 @@ async def round_delete(
     and in the allow-list, otherwise falls back to ``GET /rounds``.
     """
     try:
-        await round_service.delete_round(round_id)
+        await round_service.delete_round(round_id, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),

@@ -37,7 +37,7 @@ class PracticeRepository:
 
     # ── Create ───────────────────────────────────────────
 
-    async def create_session(self, session: PracticeSession) -> None:
+    async def create_session(self, session: PracticeSession, user_id: str) -> None:
         """Insert a new practice session row (without attempts).
 
         Only the session metadata is persisted here; attempts are recorded
@@ -45,14 +45,16 @@ class PracticeRepository:
 
         Args:
             session: The session to persist. Must have a unique ``id``.
+            user_id: The ID of the user who owns this session.
         """
         conn = await self._conn()
         try:
             await conn.execute(
-                """INSERT INTO practice_sessions (id, title, session_date, notes, created_at)
-                   VALUES (?, ?, ?, ?, ?)""",
+                """INSERT INTO practice_sessions (id, user_id, title, session_date, notes, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     session.id,
+                    user_id,
                     session.title,
                     session.session_date.isoformat(),
                     session.notes,
@@ -120,7 +122,7 @@ class PracticeRepository:
 
     # ── Read ─────────────────────────────────────────────
 
-    async def get_session(self, session_id: str) -> PracticeSession | None:
+    async def get_session(self, session_id: str, user_id: str) -> PracticeSession | None:
         """Fetch a session with all its attempts.
 
         Performs two queries: one for the session row, then one for all
@@ -128,16 +130,18 @@ class PracticeRepository:
 
         Args:
             session_id: The hex UUID of the session to retrieve.
+            user_id: The ID of the user who owns this session.
 
         Returns:
             A fully-hydrated ``PracticeSession`` with its ``attempts`` list
-            populated, or ``None`` if no session exists with that ID.
+            populated, or ``None`` if no session exists with that ID for this user.
         """
         conn = await self._conn()
         try:
             conn.row_factory = aiosqlite.Row
             cur = await conn.execute(
-                "SELECT * FROM practice_sessions WHERE id = ?", (session_id,)
+                "SELECT * FROM practice_sessions WHERE id = ? AND user_id = ?",
+                (session_id, user_id),
             )
             row = await cur.fetchone()
             if row is None:
@@ -174,13 +178,14 @@ class PracticeRepository:
         finally:
             await conn.close()
 
-    async def list_sessions(self, limit: int = 50) -> list[PracticeSessionSummary]:
+    async def list_sessions(self, user_id: str, limit: int = 50) -> list[PracticeSessionSummary]:
         """List sessions with aggregate stroke/attempt counts, newest first.
 
         Uses a LEFT JOIN with GROUP BY to compute totals in a single query.
         Sessions with no attempts will show ``total_strokes=0, total_attempts=0``.
 
         Args:
+            user_id: The ID of the user whose sessions to list.
             limit: Maximum number of sessions to return. Defaults to 50.
 
         Returns:
@@ -198,10 +203,11 @@ class PracticeRepository:
                        COUNT(a.id) AS total_attempts
                    FROM practice_sessions s
                    LEFT JOIN practice_attempts a ON a.session_id = s.id
+                   WHERE s.user_id = ?
                    GROUP BY s.id
                    ORDER BY s.session_date DESC, s.created_at DESC
                    LIMIT ?""",
-                (limit,),
+                (user_id, limit),
             )
             rows = await cur.fetchall()
             return [
@@ -217,8 +223,11 @@ class PracticeRepository:
         finally:
             await conn.close()
 
-    async def get_all_attempts(self) -> list[PracticeAttempt]:
-        """Fetch all practice attempts across all sessions.
+    async def get_all_attempts(self, user_id: str) -> list[PracticeAttempt]:
+        """Fetch all practice attempts across all sessions for a user.
+
+        Args:
+            user_id: The ID of the user whose attempts to fetch.
 
         Returns:
             A flat list of all ``PracticeAttempt`` records ordered by station
@@ -228,8 +237,11 @@ class PracticeRepository:
         try:
             conn.row_factory = aiosqlite.Row
             cur = await conn.execute(
-                """SELECT * FROM practice_attempts
-                   ORDER BY station_slug, attempt_number"""
+                """SELECT a.* FROM practice_attempts a
+                   JOIN practice_sessions s ON s.id = a.session_id
+                   WHERE s.user_id = ?
+                   ORDER BY a.station_slug, a.attempt_number""",
+                (user_id,),
             )
             rows = await cur.fetchall()
             return [
@@ -248,7 +260,7 @@ class PracticeRepository:
 
     # ── Delete ───────────────────────────────────────────
 
-    async def delete_session(self, session_id: str) -> bool:
+    async def delete_session(self, session_id: str, user_id: str) -> bool:
         """Delete a session and cascade-delete its attempts.
 
         Enables ``PRAGMA foreign_keys`` before the DELETE so that the
@@ -256,6 +268,7 @@ class PracticeRepository:
 
         Args:
             session_id: The hex UUID of the session to remove.
+            user_id: The ID of the user who owns this session.
 
         Returns:
             ``True`` if a session was deleted, ``False`` if the ID was not found.
@@ -264,7 +277,8 @@ class PracticeRepository:
         try:
             await conn.execute("PRAGMA foreign_keys = ON")
             cur = await conn.execute(
-                "DELETE FROM practice_sessions WHERE id = ?", (session_id,)
+                "DELETE FROM practice_sessions WHERE id = ? AND user_id = ?",
+                (session_id, user_id),
             )
             await conn.commit()
             return cur.rowcount > 0

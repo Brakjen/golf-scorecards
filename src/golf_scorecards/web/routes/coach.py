@@ -31,13 +31,14 @@ async def coach_page(
     """Render the coach page with insights and Q&A."""
     from golf_scorecards.rounds.stats import compute_quick_stats
 
-    summaries = await round_service.list_rounds()
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
     stats = None
     if summaries:
         stats_rounds = []
         for s in summaries[:20]:
             try:
-                stats_rounds.append(await round_service.get_round(s.id))
+                stats_rounds.append(await round_service.get_round(s.id, user_id))
             except RoundNotFoundError:
                 continue
         if stats_rounds:
@@ -66,6 +67,7 @@ async def coach_page(
 
 @router.post("/insights/refresh")
 async def insights_refresh(
+    request: Request,
     round_service: RoundService = Depends(get_round_service),
     insights_service: InsightsService | None = Depends(get_insights_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
@@ -77,7 +79,8 @@ async def insights_refresh(
             detail="OpenAI API key not configured",
         )
 
-    summaries = await round_service.list_rounds()
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
     if not summaries:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -87,7 +90,7 @@ async def insights_refresh(
     rounds = []
     for s in summaries[:20]:
         try:
-            rounds.append(await round_service.get_round(s.id))
+            rounds.append(await round_service.get_round(s.id, user_id))
         except RoundNotFoundError:
             continue
 
@@ -99,7 +102,7 @@ async def insights_refresh(
 
     await insights_service.generate_insights(
         rounds,
-        handicap_index=await settings_repo.get("handicap_index"),
+        handicap_index=await settings_repo.get("handicap_index", user_id),
         force=True,
     )
     return RedirectResponse(url="/coach", status_code=303)
@@ -107,6 +110,7 @@ async def insights_refresh(
 
 @router.post("/rounds/{round_id}/insights/refresh")
 async def round_insights_refresh(
+    request: Request,
     round_id: str,
     round_service: RoundService = Depends(get_round_service),
     insights_service: InsightsService | None = Depends(get_insights_service),
@@ -119,8 +123,9 @@ async def round_insights_refresh(
             detail="OpenAI API key not configured",
         )
 
+    user_id = request.state.user.id
     try:
-        r = await round_service.get_round(round_id)
+        r = await round_service.get_round(round_id, user_id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
@@ -128,7 +133,7 @@ async def round_insights_refresh(
 
     await insights_service.generate_insights(
         [r],
-        handicap_index=await settings_repo.get("handicap_index"),
+        handicap_index=await settings_repo.get("handicap_index", user_id),
         force=True,
         cache_key=f"round:{round_id}",
     )
@@ -157,7 +162,8 @@ async def ask_dashboard(
     if not question_clean:
         return RedirectResponse(url="/coach", status_code=303)
 
-    summaries = await round_service.list_rounds()
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
     if not summaries:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -167,7 +173,7 @@ async def ask_dashboard(
     rounds = []
     for s in summaries[:20]:
         try:
-            rounds.append(await round_service.get_round(s.id))
+            rounds.append(await round_service.get_round(s.id, user_id))
         except RoundNotFoundError:
             continue
 
@@ -180,7 +186,7 @@ async def ask_dashboard(
     qa_entry = await insights_service.answer_question(
         rounds,
         question_clean,
-        handicap_index=await settings_repo.get("handicap_index"),
+        handicap_index=await settings_repo.get("handicap_index", user_id),
     )
 
     from golf_scorecards.rounds.stats import compute_quick_stats

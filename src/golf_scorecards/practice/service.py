@@ -35,6 +35,7 @@ class PracticeService:
 
     async def create_session(
         self,
+        user_id: str,
         title: str | None = None,
         session_date: date | None = None,
         notes: str | None = None,
@@ -44,6 +45,7 @@ class PracticeService:
         Generates a unique hex UUID and timestamps the session at creation.
 
         Args:
+            user_id: The ID of the user who owns this session.
             title: Optional location/label (e.g. "Practice green 2, Solastranden").
                    Falls back to "Session" in the UI if not provided.
             session_date: Date the session is performed. Defaults to today.
@@ -60,14 +62,15 @@ class PracticeService:
             created_at=datetime.now(),
             attempts=[],
         )
-        await self._repo.create_session(session)
+        await self._repo.create_session(session, user_id)
         return session
 
-    async def get_session(self, session_id: str) -> PracticeSession:
+    async def get_session(self, session_id: str, user_id: str) -> PracticeSession:
         """Fetch a session by ID, including all recorded attempts.
 
         Args:
             session_id: The hex UUID of the session.
+            user_id: The ID of the user who owns this session.
 
         Returns:
             The full ``PracticeSession`` with its attempts.
@@ -75,32 +78,34 @@ class PracticeService:
         Raises:
             PracticeSessionNotFoundError: If no session exists with this ID.
         """
-        session = await self._repo.get_session(session_id)
+        session = await self._repo.get_session(session_id, user_id)
         if session is None:
             raise PracticeSessionNotFoundError(f"Session {session_id!r} not found")
         return session
 
-    async def list_sessions(self, limit: int = 50) -> list[PracticeSessionSummary]:
+    async def list_sessions(self, user_id: str, limit: int = 50) -> list[PracticeSessionSummary]:
         """List sessions with summary stats, newest first.
 
         Args:
+            user_id: The ID of the user whose sessions to list.
             limit: Maximum number of sessions to return.
 
         Returns:
             A list of ``PracticeSessionSummary`` with total strokes and attempt counts.
         """
-        return await self._repo.list_sessions(limit)
+        return await self._repo.list_sessions(user_id, limit)
 
-    async def delete_session(self, session_id: str) -> None:
+    async def delete_session(self, session_id: str, user_id: str) -> None:
         """Delete a session and all its attempts.
 
         Args:
             session_id: The hex UUID of the session to delete.
+            user_id: The ID of the user who owns this session.
 
         Raises:
             PracticeSessionNotFoundError: If no session exists with this ID.
         """
-        deleted = await self._repo.delete_session(session_id)
+        deleted = await self._repo.delete_session(session_id, user_id)
         if not deleted:
             raise PracticeSessionNotFoundError(f"Session {session_id!r} not found")
 
@@ -216,17 +221,20 @@ class PracticeService:
             "station_stats": station_stats,
         }
 
-    async def compute_visualization_stats(self) -> dict:
+    async def compute_visualization_stats(self, user_id: str) -> dict:
         """Compute aggregate per-station stats across all sessions for visualization.
 
         For putting stations, computes 1-putt%, 2-putt%, 3-putt% distributions.
         For pitch/bunker stations, computes U&D% (≤2) and D3% (≤3).
 
+        Args:
+            user_id: The ID of the user whose stats to compute.
+
         Returns:
             A dict with ``putting`` and ``pitching`` keys, each containing
             per-station stats dicts keyed by station slug.
         """
-        attempts = await self._repo.get_all_attempts()
+        attempts = await self._repo.get_all_attempts(user_id)
 
         putting: dict[str, dict] = {}
         pitching: dict[str, dict] = {}

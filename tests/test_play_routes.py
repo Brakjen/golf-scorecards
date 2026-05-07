@@ -1,12 +1,15 @@
 """Tests for the on-course play surface (grid + per-hole guide)."""
 
+from datetime import datetime, UTC
 from importlib.resources import files
 
 import pytest
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.testclient import TestClient
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from golf_scorecards.auth.models import User
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.db.connection import init_db_sync
@@ -19,6 +22,21 @@ from golf_scorecards.web.dependencies import (
     get_settings_repo,
 )
 from golf_scorecards.web.routes import router
+
+TEST_USER = User(
+    id="testuser0000000000000000000000001",
+    username="testuser",
+    display_name="Test User",
+    is_admin=False,
+    created_at=datetime.now(tz=UTC),
+)
+
+
+class _InjectUserMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):  # type: ignore[no-untyped-def]
+        request.state.user = TEST_USER
+        request.state.admin_user = None
+        return await call_next(request)
 
 
 def _make_test_app(db_path: str) -> FastAPI:
@@ -33,6 +51,7 @@ def _make_test_app(db_path: str) -> FastAPI:
     app.dependency_overrides[get_round_service] = lambda: round_service
     app.dependency_overrides[get_settings_repo] = lambda: settings_repo
     app.include_router(router)
+    app.add_middleware(_InjectUserMiddleware)
     return app
 
 

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     app_password: str = ""
     session_secret: str = "dev-insecure-secret-change-me"
+    invite_code: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
