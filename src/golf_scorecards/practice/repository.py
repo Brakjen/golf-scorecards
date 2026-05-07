@@ -217,6 +217,35 @@ class PracticeRepository:
         finally:
             await conn.close()
 
+    async def get_all_attempts(self) -> list[PracticeAttempt]:
+        """Fetch all practice attempts across all sessions.
+
+        Returns:
+            A flat list of all ``PracticeAttempt`` records ordered by station
+            and attempt number.
+        """
+        conn = await self._conn()
+        try:
+            conn.row_factory = aiosqlite.Row
+            cur = await conn.execute(
+                """SELECT * FROM practice_attempts
+                   ORDER BY station_slug, attempt_number"""
+            )
+            rows = await cur.fetchall()
+            return [
+                PracticeAttempt(
+                    id=r["id"],
+                    session_id=r["session_id"],
+                    station_slug=r["station_slug"],
+                    attempt_number=r["attempt_number"],
+                    strokes=r["strokes"],
+                    nfs=bool(r["nfs"]),
+                )
+                for r in rows
+            ]
+        finally:
+            await conn.close()
+
     # ── Delete ───────────────────────────────────────────
 
     async def delete_session(self, session_id: str) -> bool:

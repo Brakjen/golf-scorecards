@@ -23,6 +23,20 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     get_catalog_service()
     settings = get_settings()
     init_db_sync(settings.db_path)
+
+    # In DEV mode, seed the database with dummy data if it's empty
+    if settings.app_env == "development":
+        import sqlite3
+
+        conn = sqlite3.connect(settings.db_path)
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM rounds").fetchone()[0]
+        finally:
+            conn.close()
+        if count == 0:
+            from golf_scorecards.dev_seed import seed_database
+            seed_database(settings.db_path)
+
     yield
 
 

@@ -66,6 +66,35 @@ async def practice_create(
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
 
+@router.get("/practice/visualize", response_class=HTMLResponse)
+async def practice_visualize(
+    request: Request,
+    service: PracticeService = Depends(get_practice_service),
+) -> HTMLResponse:
+    """Render the practice visualization page with SVG course illustrations.
+
+    Shows aggregate stats across all practice sessions visualized as:
+    - A fairway+green illustration with pitch distances and D3/U&D percentages.
+    - A putting green with concentric distance rings and putt outcome percentages.
+
+    Args:
+        request: The incoming HTTP request (needed by Jinja2 templates).
+        service: Injected practice service for computing aggregate stats.
+
+    Returns:
+        An HTML response rendering ``practice_visualize.html``.
+    """
+    viz_stats = await service.compute_visualization_stats()
+    return templates.TemplateResponse(
+        request=request,
+        name="practice_visualize.html",
+        context={
+            "putting": viz_stats["putting"],
+            "pitching": viz_stats["pitching"],
+        },
+    )
+
+
 @router.get("/practice/{session_id}")
 async def practice_session(session_id: str) -> RedirectResponse:
     """Redirect to the session summary page.

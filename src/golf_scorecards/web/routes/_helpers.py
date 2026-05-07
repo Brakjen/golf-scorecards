@@ -108,7 +108,7 @@ async def build_home_context(
     round_stableford: dict[str, int] = {}
     if summaries:
         stats_rounds = []
-        for s in summaries[:5]:
+        for s in summaries[:20]:
             try:
                 r = await round_service.get_round(s.id)
                 stats_rounds.append(r)

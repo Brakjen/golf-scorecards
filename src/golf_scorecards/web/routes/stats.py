@@ -34,7 +34,7 @@ async def stats_page(
     trends = None
     if summaries:
         stats_rounds = []
-        for s in summaries[:5]:
+        for s in summaries[:20]:
             try:
                 stats_rounds.append(await round_service.get_round(s.id))
             except RoundNotFoundError:

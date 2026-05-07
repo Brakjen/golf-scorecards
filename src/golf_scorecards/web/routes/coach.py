@@ -35,7 +35,7 @@ async def coach_page(
     stats = None
     if summaries:
         stats_rounds = []
-        for s in summaries[:5]:
+        for s in summaries[:20]:
             try:
                 stats_rounds.append(await round_service.get_round(s.id))
             except RoundNotFoundError:
@@ -85,7 +85,7 @@ async def insights_refresh(
         )
 
     rounds = []
-    for s in summaries[:5]:
+    for s in summaries[:20]:
         try:
             rounds.append(await round_service.get_round(s.id))
         except RoundNotFoundError:
@@ -165,7 +165,7 @@ async def ask_dashboard(
         )
 
     rounds = []
-    for s in summaries[:5]:
+    for s in summaries[:20]:
         try:
             rounds.append(await round_service.get_round(s.id))
         except RoundNotFoundError:

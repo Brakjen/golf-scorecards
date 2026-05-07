@@ -2310,3 +2310,40 @@ body {
   padding: 3rem 1rem;
   font-size: 0.95rem;
 }
+
+/* ─── Practice Visualization ─────────────────────────── */
+
+.practice-viz .viz-canvas {
+  background: rgba(18, 26, 18, 0.4);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 0.5rem;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.viz-svg--course {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.viz-svg--course text {
+  font-family: var(--font-body);
+}
+
+.viz-badge rect {
+  transition: opacity 0.2s;
+}
+
+.viz-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 2rem 1rem;
+  font-style: italic;
+}
+
+.viz-actions {
+  text-align: center;
+  margin-top: 2rem;
+}

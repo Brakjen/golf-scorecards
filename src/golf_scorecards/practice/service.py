@@ -215,3 +215,50 @@ class PracticeService:
             "down_in_3_pct": down_in_3_pct,
             "station_stats": station_stats,
         }
+
+    async def compute_visualization_stats(self) -> dict:
+        """Compute aggregate per-station stats across all sessions for visualization.
+
+        For putting stations, computes 1-putt%, 2-putt%, 3-putt% distributions.
+        For pitch/bunker stations, computes U&D% (≤2) and D3% (≤3).
+
+        Returns:
+            A dict with ``putting`` and ``pitching`` keys, each containing
+            per-station stats dicts keyed by station slug.
+        """
+        attempts = await self._repo.get_all_attempts()
+
+        putting: dict[str, dict] = {}
+        pitching: dict[str, dict] = {}
+
+        for slug in station_order():
+            station = get_station(slug)
+            sa = [a for a in attempts if a.station_slug == slug]
+            if not sa:
+                continue
+
+            n = len(sa)
+            if station.category == "putt":
+                one_putt = sum(1 for a in sa if a.strokes == 1)
+                two_putt = sum(1 for a in sa if a.strokes == 2)
+                three_plus = sum(1 for a in sa if a.strokes >= 3)
+                putting[slug] = {
+                    "station": station,
+                    "attempts": n,
+                    "one_putt_pct": round(one_putt / n * 100, 1),
+                    "two_putt_pct": round(two_putt / n * 100, 1),
+                    "three_putt_pct": round(three_plus / n * 100, 1),
+                    "avg_strokes": round(sum(a.strokes for a in sa) / n, 2),
+                }
+            else:
+                ud = sum(1 for a in sa if a.strokes <= 2)
+                d3 = sum(1 for a in sa if a.strokes <= 3)
+                pitching[slug] = {
+                    "station": station,
+                    "attempts": n,
+                    "up_and_down_pct": round(ud / n * 100, 1),
+                    "down_in_3_pct": round(d3 / n * 100, 1),
+                    "avg_strokes": round(sum(a.strokes for a in sa) / n, 2),
+                }
+
+        return {"putting": putting, "pitching": pitching}
