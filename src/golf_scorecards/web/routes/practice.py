@@ -33,8 +33,9 @@ async def practice_list(
     """
     sessions = await service.list_sessions()
     return templates.TemplateResponse(
-        "practice_list.html",
-        {"request": request, "sessions": sessions},
+        request=request,
+        name="practice_list.html",
+        context={"sessions": sessions},
     )
 
 
@@ -113,9 +114,9 @@ async def practice_session(
     current_station = STATIONS[current_station_idx]
 
     return templates.TemplateResponse(
-        "practice_session.html",
-        {
-            "request": request,
+        request=request,
+        name="practice_session.html",
+        context={
             "session": session,
             "stations": STATIONS,
             "current_station": current_station,
@@ -189,9 +190,9 @@ async def practice_summary(
     session = await service.get_session(session_id)
     stats = service.compute_stats(session)
     return templates.TemplateResponse(
-        "practice_summary.html",
-        {
-            "request": request,
+        request=request,
+        name="practice_summary.html",
+        context={
             "session": session,
             "stats": stats,
             "stations": STATIONS,
