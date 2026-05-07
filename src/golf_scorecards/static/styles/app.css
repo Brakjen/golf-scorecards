@@ -1896,3 +1896,218 @@ body {
 .logout-form {
   margin-top: 0.5rem;
 }
+
+/* ── Practice ─────────────────────────────────────────────── */
+
+.practice-entry {
+  text-align: center;
+}
+
+.practice-header {
+  margin-bottom: 1.5rem;
+}
+
+.practice-progress {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.practice-progress__ball {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Station pip navigation */
+.practice-station-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 2rem;
+}
+
+.practice-station-pip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--rule);
+  border: 2px solid var(--rule);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.practice-station-pip.is-done {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.practice-station-pip.is-active {
+  background: transparent;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Stroke entry buttons */
+.practice-strokes {
+  margin-bottom: 2rem;
+}
+
+.practice-strokes__prompt {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.practice-strokes__buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stroke-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.stroke-btn:hover {
+  background: var(--accent-soft);
+}
+
+.stroke-btn:active {
+  transform: scale(0.92);
+  background: var(--accent);
+  color: #0e160e;
+}
+
+/* History of recorded attempts below the buttons */
+.practice-history {
+  text-align: left;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.practice-history__station {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+
+.practice-history__label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.practice-history__scores {
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* Summary page */
+.practice-summary {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.summary-card {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 20px;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.95rem;
+}
+
+.summary-card__row:last-child {
+  border-bottom: none;
+}
+
+.summary-card__row--highlight {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.summary-card__label {
+  color: var(--muted);
+}
+
+.summary-card__value {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.summary-card__row--highlight .summary-card__value {
+  color: var(--accent);
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--ink);
+}
+
+.station-breakdown {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.station-breakdown__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+
+.station-breakdown__row:last-child {
+  border-bottom: none;
+}
+
+.station-breakdown__name {
+  font-weight: 700;
+  flex: 1;
+  color: var(--ink);
+}
+
+.station-breakdown__stat {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.summary-actions {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 3rem 1rem;
+  font-size: 0.95rem;
+}
