@@ -4,21 +4,25 @@
 
 {% block body %}
 <main class="page-shell">
-  <div class="list-header">
-    <h1>Practice</h1>
+  <h1 class="page-title">Practice</h1>
+
+  <div class="practice-new-form">
     <form method="post" action="/practice">
-      <button type="submit" class="btn-primary">+ New session</button>
+      <input type="text" name="title" placeholder="Location (e.g. Solastranden practice area)" class="form-input">
+      <input type="text" name="notes" placeholder="Notes (e.g. windy, firm greens)" class="form-input">
+      <button type="submit" class="btn-primary btn-primary--block">Start new session</button>
     </form>
   </div>
 
   {% if sessions %}
+  <h2 class="section-title">History</h2>
   <div class="round-list">
     {% for s in sessions %}
     <div class="round-card">
       <div class="round-card__date">{{ s.session_date.strftime('%b %d, %Y') }}</div>
       <div class="round-card__course">
         <a href="/practice/{{ s.id }}" class="round-card__link">
-          Session
+          {{ s.title or s.session_date.strftime('%b %d, %H:%M') }}
         </a>
       </div>
       <div class="round-card__stats">

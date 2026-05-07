@@ -1904,49 +1904,133 @@ body {
 }
 
 .practice-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .practice-progress {
   display: flex;
   justify-content: center;
   gap: 1.5rem;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
-.practice-progress__ball {
-  font-weight: 700;
-  color: var(--ink);
+.practice-back {
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 
-/* Station pip navigation */
-.practice-station-nav {
+/* Station tab navigation */
+.practice-stations {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  margin-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.practice-station-tab {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.practice-station-tab.is-active {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: rgba(228, 232, 228, 0.08);
+}
+
+.practice-station-tab.is-done {
+  border-color: var(--accent);
+  background: rgba(78, 173, 122, 0.15);
+  color: var(--accent);
+}
+
+.practice-station-tab.is-done.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(78, 173, 122, 0.25);
+}
+
+.practice-station-tab.is-partial {
+  border-color: #c9a227;
+  background: rgba(201, 162, 39, 0.12);
+  color: #e0bf4a;
+}
+
+.practice-station-tab.is-partial.is-active {
+  border-color: #c9a227;
+  color: #e0bf4a;
+  background: rgba(201, 162, 39, 0.2);
+}
+
+.practice-station-tab__name {
+  white-space: nowrap;
+}
+
+/* Active station display */
+.practice-active-station {
+  margin-bottom: 1.5rem;
+}
+
+.practice-active-station__name {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  margin: 0 0 0.25rem;
+}
+
+.practice-active-station__desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+
+/* Ball pips — 7 circles in a row */
+.practice-ball-pips {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
-.practice-station-pip {
-  width: 12px;
-  height: 12px;
+.ball-pip {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
   border: 2px solid var(--rule);
-  transition: background 0.2s, border-color 0.2s;
+  color: var(--muted);
+  text-decoration: none;
+  transition: all 0.15s;
 }
 
-.practice-station-pip.is-done {
-  background: var(--accent);
+.ball-pip--active {
   border-color: var(--accent);
-}
-
-.practice-station-pip.is-active {
-  background: transparent;
-  border-color: var(--accent);
+  color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ball-pip--done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* Stroke entry buttons */
@@ -1965,6 +2049,10 @@ body {
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.practice-strokes__buttons--small {
+  gap: 6px;
 }
 
 .stroke-btn {
@@ -1990,30 +2078,141 @@ body {
   color: #0e160e;
 }
 
-/* History of recorded attempts below the buttons */
-.practice-history {
+.stroke-btn--small {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+}
+
+.stroke-btn--selected {
+  background: var(--accent);
+  color: #0e160e;
+}
+
+/* Station edit view — ball cards grid */
+.practice-balls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
   text-align: left;
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+.practice-ball-card {
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 12px 16px;
+}
+
+.practice-ball-card--done {
+  border-color: var(--accent);
+}
+
+.practice-ball-card__number {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.practice-ball-card__strokes {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+/* Notes display */
+.practice-notes {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+/* New session form */
+.practice-new-form {
+  margin-bottom: 2rem;
+}
+
+.practice-new-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   max-width: 400px;
   margin: 0 auto;
 }
 
-.practice-history__station {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.85rem;
-}
-
-.practice-history__label {
-  font-weight: 700;
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
   color: var(--ink);
+  font-size: 0.9rem;
+  font-family: inherit;
 }
 
-.practice-history__scores {
+.form-input::placeholder {
   color: var(--muted);
-  letter-spacing: 0.04em;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-primary--block {
+  width: 100%;
+}
+
+/* Session actions (view summary link) */
+.practice-session-actions {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.btn-secondary {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: var(--accent-soft);
+}
+
+.btn-danger {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid #a03030;
+  background: transparent;
+  color: #d45555;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-danger:hover {
+  background: rgba(213, 85, 85, 0.12);
+}
+
+.practice-delete-form {
+  display: inline-block;
+  margin-top: 0.75rem;
 }
 
 /* Summary page */

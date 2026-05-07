@@ -35,6 +35,7 @@ class PracticeService:
 
     async def create_session(
         self,
+        title: str | None = None,
         session_date: date | None = None,
         notes: str | None = None,
     ) -> PracticeSession:
@@ -43,6 +44,8 @@ class PracticeService:
         Generates a unique hex UUID and timestamps the session at creation.
 
         Args:
+            title: Optional location/label (e.g. "Practice green 2, Solastranden").
+                   Falls back to "Session" in the UI if not provided.
             session_date: Date the session is performed. Defaults to today.
             notes: Optional free-text notes (e.g. weather, conditions).
 
@@ -51,6 +54,7 @@ class PracticeService:
         """
         session = PracticeSession(
             id=uuid.uuid4().hex,
+            title=title or None,
             session_date=session_date or date.today(),
             notes=notes,
             created_at=datetime.now(),

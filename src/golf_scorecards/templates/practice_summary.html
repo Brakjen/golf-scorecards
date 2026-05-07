@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Practice Summary — {{ session.session_date.strftime('%b %d, %Y') }}{% endblock %}
+{% block title %}Practice Summary — {{ session.title or session.session_date.strftime('%b %d, %Y') }}{% endblock %}
 
 {% block body %}
 <main class="page-shell practice-summary">
-  <h1 class="page-title">Session Summary</h1>
-  <p class="page-subtitle">{{ session.session_date.strftime('%B %d, %Y') }}</p>
+  <h1 class="page-title">{{ session.title or 'Session Summary' }}</h1>
+  <p class="page-subtitle">{{ session.session_date.strftime('%B %d, %Y') }}{% if session.notes %} · {{ session.notes }}{% endif %}</p>
 
   <div class="summary-card">
     <div class="summary-card__row summary-card__row--highlight">
@@ -48,7 +48,12 @@
   {% endif %}
 
   <div class="summary-actions">
-    <a href="/practice" class="btn-primary">← Back to Practice</a>
+    <a href="/practice/{{ session.id }}/station/{{ stations[0].slug }}" class="btn-secondary">Edit session</a>
+    <a href="/practice" class="btn-primary">← Practice</a>
+    <form method="post" action="/practice/{{ session.id }}/delete" class="practice-delete-form"
+          onsubmit="return confirm('Delete this session and all recorded attempts?')">
+      <button type="submit" class="btn-danger">Delete session</button>
+    </form>
   </div>
 </main>
 {% endblock %}

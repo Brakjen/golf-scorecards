@@ -52,6 +52,7 @@ class PracticeSession(BaseModel):
 
     Attributes:
         id: Unique identifier (hex UUID).
+        title: Optional location/label (e.g. "Practice green 2, Solastranden").
         session_date: Date the session was performed.
         notes: Optional free-text notes about conditions, etc.
         created_at: Timestamp when the session was started.
@@ -59,6 +60,7 @@ class PracticeSession(BaseModel):
     """
 
     id: str
+    title: str | None = None
     session_date: date
     notes: str | None = None
     created_at: datetime
@@ -70,12 +72,14 @@ class PracticeSessionSummary(BaseModel):
 
     Attributes:
         id: Session ID.
+        title: Optional session title/location.
         session_date: Date played.
         total_strokes: Sum of all attempt strokes.
         total_attempts: Number of attempts recorded.
     """
 
     id: str
+    title: str | None = None
     session_date: date
     total_strokes: int
     total_attempts: int

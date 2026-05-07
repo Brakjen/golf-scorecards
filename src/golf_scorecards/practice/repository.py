@@ -49,10 +49,11 @@ class PracticeRepository:
         conn = await self._conn()
         try:
             await conn.execute(
-                """INSERT INTO practice_sessions (id, session_date, notes, created_at)
-                   VALUES (?, ?, ?, ?)""",
+                """INSERT INTO practice_sessions (id, title, session_date, notes, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
                 (
                     session.id,
+                    session.title,
                     session.session_date.isoformat(),
                     session.notes,
                     session.created_at.isoformat(),
@@ -164,6 +165,7 @@ class PracticeRepository:
 
             return PracticeSession(
                 id=row["id"],
+                title=row["title"] if "title" in row.keys() else None,
                 session_date=date.fromisoformat(row["session_date"]),
                 notes=row["notes"],
                 created_at=datetime.fromisoformat(row["created_at"]),
@@ -190,6 +192,7 @@ class PracticeRepository:
             cur = await conn.execute(
                 """SELECT
                        s.id,
+                       s.title,
                        s.session_date,
                        COALESCE(SUM(a.strokes), 0) AS total_strokes,
                        COUNT(a.id) AS total_attempts
@@ -204,6 +207,7 @@ class PracticeRepository:
             return [
                 PracticeSessionSummary(
                     id=r["id"],
+                    title=r["title"],
                     session_date=date.fromisoformat(r["session_date"]),
                     total_strokes=r["total_strokes"],
                     total_attempts=r["total_attempts"],

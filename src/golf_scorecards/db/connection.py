@@ -73,6 +73,15 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
         conn.commit()
 
+    # Practice sessions: add title column
+    practice_cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(practice_sessions)").fetchall()
+    }
+    if practice_cols and "title" not in practice_cols:
+        conn.execute("ALTER TABLE practice_sessions ADD COLUMN title TEXT")
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

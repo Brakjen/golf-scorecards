@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from golf_scorecards.practice.service import PracticeService
-from golf_scorecards.practice.stations import STATIONS
+from golf_scorecards.practice.stations import STATIONS, get_station
 from golf_scorecards.web.dependencies import get_practice_service, get_templates
 
 router = APIRouter()
@@ -41,92 +41,42 @@ async def practice_list(
 
 @router.post("/practice")
 async def practice_create(
+    title: str = Form(""),
+    notes: str = Form(""),
     service: PracticeService = Depends(get_practice_service),
 ) -> RedirectResponse:
     """Create a new practice session and redirect to the active entry page.
 
-    Generates a fresh session with today's date, persists it, then
-    redirects the user to the session's stroke-entry interface.
+    Accepts an optional title (location/label) and notes from the creation
+    form. If title is blank, it will be stored as None and the UI will
+    fall back to displaying the date.
 
     Args:
+        title: Optional location name (e.g. "Solastranden practice area").
+        notes: Optional free-text notes (e.g. "Windy, firm greens").
         service: Injected practice service for session creation.
 
     Returns:
         A 303 redirect to ``/practice/{session_id}``.
     """
-    session = await service.create_session()
+    session = await service.create_session(
+        title=title.strip() or None,
+        notes=notes.strip() or None,
+    )
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
 
-@router.get("/practice/{session_id}", response_class=HTMLResponse)
-async def practice_session(
-    session_id: str,
-    request: Request,
-    service: PracticeService = Depends(get_practice_service),
-) -> HTMLResponse:
-    """Render the active practice session entry page.
-
-    Loads the session and its recorded attempts, then determines which
-    station and ball number the player is currently on. If all attempts
-    are complete (7 stations × 7 balls = 49), redirects to the summary.
-
-    The template receives the full station catalog, recorded attempts
-    grouped by station, and the current position (station index + ball
-    number) so the UI can highlight the active entry point.
+@router.get("/practice/{session_id}")
+async def practice_session(session_id: str) -> RedirectResponse:
+    """Redirect to the session summary page.
 
     Args:
         session_id: The hex UUID of the session from the URL path.
-        request: The incoming HTTP request (needed by Jinja2 templates).
-        service: Injected practice service for fetching session data.
 
     Returns:
-        An HTML response rendering ``practice_session.html``, or a
-        redirect to the summary page if the session is complete.
-
-    Raises:
-        HTTPException (404): If no session exists with the given ID
-            (handled by FastAPI's exception propagation).
+        A 303 redirect to ``/practice/{session_id}/summary``.
     """
-    session = await service.get_session(session_id)
-    attempts = session.attempts
-
-    # Determine current position: find first station+ball without an attempt
-    total_balls = sum(s.balls for s in STATIONS)
-    recorded = {(a.station_slug, a.attempt_number) for a in attempts}
-
-    current_station_idx = 0
-    current_ball = 1
-    session_complete = True
-
-    for i, station in enumerate(STATIONS):
-        for ball in range(1, station.balls + 1):
-            if (station.slug, ball) not in recorded:
-                current_station_idx = i
-                current_ball = ball
-                session_complete = False
-                break
-        if not session_complete:
-            break
-
-    if session_complete:
-        return RedirectResponse(url=f"/practice/{session_id}/summary", status_code=303)
-
-    current_station = STATIONS[current_station_idx]
-
-    return templates.TemplateResponse(
-        request=request,
-        name="practice_session.html",
-        context={
-            "session": session,
-            "stations": STATIONS,
-            "current_station": current_station,
-            "current_station_idx": current_station_idx,
-            "current_ball": current_ball,
-            "total_balls": total_balls,
-            "attempts_count": len(attempts),
-            "attempts": attempts,
-        },
-    )
+    return RedirectResponse(url=f"/practice/{session_id}/summary", status_code=303)
 
 
 @router.post("/practice/{session_id}/attempt")
@@ -135,24 +85,26 @@ async def practice_record_attempt(
     station_slug: str = Form(...),
     attempt_number: int = Form(...),
     strokes: int = Form(...),
+    return_to: str = Form(""),
     service: PracticeService = Depends(get_practice_service),
 ) -> RedirectResponse:
     """Record a single hole-out attempt and redirect back to the session.
 
     Accepts form data from the stroke buttons (1–5+), persists the attempt
-    via the service layer, then redirects back to the session entry page.
-    The GET handler will automatically advance to the next ball or station.
+    via the service layer, then redirects back to the session entry page
+    or to the station view if ``return_to`` is provided.
 
     Args:
         session_id: The hex UUID of the session from the URL path.
         station_slug: Which station this attempt belongs to (hidden form field).
         attempt_number: 1-based ball number within the station (hidden form field).
         strokes: Number of strokes to hole out (from the tapped button value).
+        return_to: Optional redirect path (used by station edit view).
         service: Injected practice service for recording the attempt.
 
     Returns:
-        A 303 redirect back to ``/practice/{session_id}`` which will show
-        the next ball or redirect to summary if the session is complete.
+        A 303 redirect back to ``/practice/{session_id}`` or to ``return_to``
+        if provided.
     """
     await service.record_attempt(
         session_id=session_id,
@@ -160,7 +112,75 @@ async def practice_record_attempt(
         attempt_number=attempt_number,
         strokes=strokes,
     )
-    return RedirectResponse(url=f"/practice/{session_id}", status_code=303)
+    if return_to and return_to.startswith(f"/practice/{session_id}"):
+        redirect_url = return_to
+    else:
+        redirect_url = f"/practice/{session_id}"
+    return RedirectResponse(url=redirect_url, status_code=303)
+
+
+@router.get("/practice/{session_id}/station/{station_slug}", response_class=HTMLResponse)
+async def practice_station_view(
+    session_id: str,
+    station_slug: str,
+    request: Request,
+    service: PracticeService = Depends(get_practice_service),
+) -> HTMLResponse:
+    """Render a specific station's entry/edit view within a session.
+
+    Allows the player to navigate to any station to review or re-record
+    attempts. Shows the station's 7 ball slots with recorded strokes and
+    tap-to-edit functionality. Unlike the auto-advancing main view, this
+    page stays on the selected station.
+
+    Args:
+        session_id: The hex UUID of the session from the URL path.
+        station_slug: The station to view (e.g. "putt-medium", "pitch-60").
+        request: The incoming HTTP request (needed by Jinja2 templates).
+        service: Injected practice service for fetching session data.
+
+    Returns:
+        An HTML response rendering ``practice_station.html``.
+    """
+    session = await service.get_session(session_id)
+    station = get_station(station_slug)
+    station_idx = next(i for i, s in enumerate(STATIONS) if s.slug == station_slug)
+
+    station_attempts = {
+        a.attempt_number: a
+        for a in session.attempts
+        if a.station_slug == station_slug
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="practice_station.html",
+        context={
+            "session": session,
+            "station": station,
+            "station_idx": station_idx,
+            "stations": STATIONS,
+            "station_attempts": station_attempts,
+        },
+    )
+
+
+@router.post("/practice/{session_id}/delete")
+async def practice_delete_session(
+    session_id: str,
+    service: PracticeService = Depends(get_practice_service),
+) -> RedirectResponse:
+    """Delete a practice session and all its attempts.
+
+    Args:
+        session_id: The hex UUID of the session to delete.
+        service: Injected practice service for deletion.
+
+    Returns:
+        A 303 redirect to the practice list page.
+    """
+    await service.delete_session(session_id)
+    return RedirectResponse(url="/practice", status_code=303)
 
 
 @router.get("/practice/{session_id}/summary", response_class=HTMLResponse)

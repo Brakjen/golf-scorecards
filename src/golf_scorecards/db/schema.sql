@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS practice_sessions (
     id              TEXT PRIMARY KEY,
+    title           TEXT,
     session_date    TEXT NOT NULL,
     notes           TEXT,
     created_at      TEXT NOT NULL
