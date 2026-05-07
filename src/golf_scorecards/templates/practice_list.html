@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Practice{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <div class="list-header">
+    <h1>Practice</h1>
+    <form method="post" action="/practice">
+      <button type="submit" class="btn-primary">+ New session</button>
+    </form>
+  </div>
+
+  {% if sessions %}
+  <div class="round-list">
+    {% for s in sessions %}
+    <div class="round-card">
+      <div class="round-card__date">{{ s.session_date.strftime('%b %d, %Y') }}</div>
+      <div class="round-card__course">
+        <a href="/practice/{{ s.id }}" class="round-card__link">
+          Session
+        </a>
+      </div>
+      <div class="round-card__stats">
+        <span class="stat-pill stat-pill--blue">{{ s.total_strokes }} strokes</span>
+        <span class="stat-pill stat-pill--muted">{{ s.total_attempts }} balls</span>
+        {% if s.total_attempts > 0 %}
+        <span class="stat-pill stat-pill--muted">avg {{ '%.1f' | format(s.total_strokes / s.total_attempts) }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">No practice sessions yet. Start one to benchmark your scoring zone skills.</p>
+  {% endif %}
+</main>
+{% endblock %}

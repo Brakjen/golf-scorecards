@@ -24,6 +24,10 @@
         <span class="tab-bar__icon" aria-hidden="true">📊</span>
         <span class="tab-bar__label">Stats</span>
       </a>
+      <a href="/practice" class="tab-bar__item{% if _path.startswith('/practice') %} is-active{% endif %}" data-tab="practice">
+        <span class="tab-bar__icon" aria-hidden="true">🎯</span>
+        <span class="tab-bar__label">Practice</span>
+      </a>
       <a href="/coach" class="tab-bar__item{% if _path == '/coach' %} is-active{% endif %}" data-tab="coach">
         <span class="tab-bar__icon" aria-hidden="true">🧠</span>
         <span class="tab-bar__label">Coach</span>

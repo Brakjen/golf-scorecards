@@ -11,6 +11,8 @@ from golf_scorecards.config import get_settings
 from golf_scorecards.handicap.repository import SlopeRatingsRepository
 from golf_scorecards.handicap.service import HandicapService
 from golf_scorecards.insights.service import InsightsService
+from golf_scorecards.practice.repository import PracticeRepository
+from golf_scorecards.practice.service import PracticeService
 from golf_scorecards.rounds.repository import RoundRepository
 from golf_scorecards.rounds.service import RoundService
 from golf_scorecards.settings_repo import SettingsRepository
@@ -81,3 +83,15 @@ def get_insights_service() -> InsightsService | None:
     if not settings.openai_api_key:
         return None
     return InsightsService(api_key=settings.openai_api_key, db_path=settings.db_path)
+
+
+@lru_cache(maxsize=1)
+def get_practice_service() -> PracticeService:
+    """Return the singleton practice service.
+
+    Returns:
+        A ``PracticeService`` backed by a ``PracticeRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return PracticeService(repository=PracticeRepository(db_path=settings.db_path))

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Practice — {{ current_station.name }}{% endblock %}
+
+{% block body %}
+<main class="page-shell practice-entry">
+  <div class="practice-header">
+    <h1 class="page-title">{{ current_station.name }}</h1>
+    <p class="page-subtitle">{{ current_station.description }}</p>
+    <div class="practice-progress">
+      <span class="practice-progress__ball">Ball {{ current_ball }} of {{ current_station.balls }}</span>
+      <span class="practice-progress__total">{{ attempts_count }} / {{ total_balls }} total</span>
+    </div>
+  </div>
+
+  <div class="practice-station-nav">
+    {% for station in stations %}
+    <span class="practice-station-pip{% if loop.index0 == current_station_idx %} is-active{% elif loop.index0 < current_station_idx %} is-done{% endif %}"
+          title="{{ station.name }}"></span>
+    {% endfor %}
+  </div>
+
+  <div class="practice-strokes">
+    <p class="practice-strokes__prompt">Strokes to hole out:</p>
+    <div class="practice-strokes__buttons">
+      {% for n in [1, 2, 3, 4, 5] %}
+      <form method="post" action="/practice/{{ session.id }}/attempt">
+        <input type="hidden" name="station_slug" value="{{ current_station.slug }}">
+        <input type="hidden" name="attempt_number" value="{{ current_ball }}">
+        <input type="hidden" name="strokes" value="{{ n }}">
+        <button type="submit" class="stroke-btn">{{ n }}{% if n == 5 %}+{% endif %}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="practice-history">
+    {% for station in stations %}
+    {% set station_attempts = [] %}
+    {% for a in attempts if a.station_slug == station.slug %}
+    {% set _ = station_attempts.append(a) %}
+    {% endfor %}
+    {% if station_attempts %}
+    <div class="practice-history__station">
+      <span class="practice-history__label">{{ station.name }}</span>
+      <span class="practice-history__scores">
+        {% for a in station_attempts %}{{ a.strokes }}{% if not loop.last %} · {% endif %}{% endfor %}
+      </span>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}
