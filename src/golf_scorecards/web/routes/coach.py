@@ -1,0 +1,210 @@
+"""Coach routes — LLM-powered insights and free-form Q&A."""
+
+from __future__ import annotations
+
+from typing import cast
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from golf_scorecards.insights.service import InsightsService
+from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
+from golf_scorecards.settings_repo import SettingsRepository
+from golf_scorecards.web.dependencies import (
+    get_insights_service,
+    get_round_service,
+    get_settings_repo,
+    get_templates,
+)
+
+router = APIRouter()
+templates = get_templates()
+
+
+@router.get("/coach", response_class=HTMLResponse)
+async def coach_page(
+    request: Request,
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> HTMLResponse:
+    """Render the coach page with insights and Q&A."""
+    from golf_scorecards.rounds.stats import compute_quick_stats
+
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
+    stats = None
+    if summaries:
+        stats_rounds = []
+        for s in summaries[:20]:
+            try:
+                stats_rounds.append(await round_service.get_round(s.id, user_id))
+            except RoundNotFoundError:
+                continue
+        if stats_rounds:
+            stats = compute_quick_stats(stats_rounds)
+
+    insights: list[str] = []
+    if insights_service is not None:
+        cached = await insights_service.get_cached_insights()
+        if cached:
+            insights = cached
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request,
+            name="coach.html",
+            context={
+                "stats": stats,
+                "insights": insights,
+                "qa_entry": None,
+                "qa_enabled": insights_service is not None,
+            },
+        ),
+    )
+
+
+@router.post("/insights/refresh")
+async def insights_refresh(
+    request: Request,
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> RedirectResponse:
+    """Generate fresh coaching insights from the last 5 rounds."""
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
+    if not summaries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds recorded yet",
+        )
+
+    rounds = []
+    for s in summaries[:20]:
+        try:
+            rounds.append(await round_service.get_round(s.id, user_id))
+        except RoundNotFoundError:
+            continue
+
+    if not rounds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds with data found",
+        )
+
+    await insights_service.generate_insights(
+        rounds,
+        handicap_index=await settings_repo.get("handicap_index", user_id),
+        force=True,
+    )
+    return RedirectResponse(url="/coach#insights", status_code=303)
+
+
+@router.post("/rounds/{round_id}/insights/refresh")
+async def round_insights_refresh(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> RedirectResponse:
+    """Generate fresh coaching insights focused on a single round."""
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    user_id = request.state.user.id
+    try:
+        r = await round_service.get_round(round_id, user_id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    await insights_service.generate_insights(
+        [r],
+        handicap_index=await settings_repo.get("handicap_index", user_id),
+        force=True,
+        cache_key=f"round:{round_id}",
+    )
+    return RedirectResponse(url=f"/rounds/{round_id}#round-insights", status_code=303)
+
+
+@router.post("/ask", response_class=HTMLResponse, response_model=None)
+async def ask_dashboard(
+    request: Request,
+    question: str = Form(default=""),
+    round_service: RoundService = Depends(get_round_service),
+    insights_service: InsightsService | None = Depends(get_insights_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
+) -> HTMLResponse | RedirectResponse:
+    """Send a free-form coaching question to the LLM with full round context.
+
+    Renders the coach page with the answer attached.
+    """
+    if insights_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OpenAI API key not configured",
+        )
+
+    question_clean = question.strip()
+    if not question_clean:
+        return RedirectResponse(url="/coach#ask", status_code=303)
+
+    user_id = request.state.user.id
+    summaries = await round_service.list_rounds(user_id)
+    if not summaries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds recorded yet",
+        )
+
+    rounds = []
+    for s in summaries[:20]:
+        try:
+            rounds.append(await round_service.get_round(s.id, user_id))
+        except RoundNotFoundError:
+            continue
+
+    if not rounds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No rounds with data found",
+        )
+
+    qa_entry = await insights_service.answer_question(
+        rounds,
+        question_clean,
+        handicap_index=await settings_repo.get("handicap_index", user_id),
+    )
+
+    from golf_scorecards.rounds.stats import compute_quick_stats
+
+    stats = compute_quick_stats(rounds) if rounds else None
+    insights: list[str] = []
+    cached = await insights_service.get_cached_insights()
+    if cached:
+        insights = cached
+
+    return cast(
+        HTMLResponse,
+        templates.TemplateResponse(
+            request=request, name="coach.html", context={
+                "stats": stats,
+                "insights": insights,
+                "qa_entry": qa_entry,
+                "qa_enabled": True,
+            },
+        ),
+    )

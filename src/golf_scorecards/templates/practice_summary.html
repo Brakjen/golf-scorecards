@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Practice Summary — {{ session.title or session.session_date.strftime('%b %d, %Y') }}{% endblock %}
+
+{% block body %}
+<main class="page-shell practice-summary">
+  <h1 class="page-title">{{ session.title or 'Session Summary' }}</h1>
+  <p class="page-subtitle">{{ session.session_date.strftime('%B %d, %Y') }}{% if session.notes %} · {{ session.notes }}{% endif %}</p>
+
+  <div class="summary-card">
+    <div class="summary-card__row summary-card__row--highlight">
+      <span class="summary-card__label">Total strokes</span>
+      <span class="summary-card__value">{{ stats.total_strokes }}</span>
+    </div>
+    <div class="summary-card__row">
+      <span class="summary-card__label">Balls played</span>
+      <span class="summary-card__value">{{ stats.total_attempts }}</span>
+    </div>
+    <div class="summary-card__row">
+      <span class="summary-card__label">Avg strokes</span>
+      <span class="summary-card__value">{{ stats.avg_strokes }}</span>
+    </div>
+    <div class="summary-card__row">
+      <span class="summary-card__label">Up &amp; Down %</span>
+      <span class="summary-card__value">{{ stats.up_and_down_pct }}%</span>
+    </div>
+    <div class="summary-card__row">
+      <span class="summary-card__label">Down in 3 %</span>
+      <span class="summary-card__value">{{ stats.down_in_3_pct }}%</span>
+    </div>
+  </div>
+
+  {% if stats.station_stats %}
+  <h2 class="section-title">Per Station</h2>
+  <div class="station-breakdown">
+    {% for station in stations %}
+    {% set ss = stats.station_stats.get(station.slug) %}
+    {% if ss %}
+    <div class="station-breakdown__row">
+      <span class="station-breakdown__name">{{ station.name }}</span>
+      <span class="station-breakdown__stat">{{ ss.total_strokes }} strokes</span>
+      <span class="station-breakdown__stat">avg {{ ss.avg_strokes }}</span>
+      <span class="station-breakdown__stat">U&D {{ ss.up_and_down_pct }}%</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="summary-actions">
+    <a href="/practice/{{ session.id }}/station/{{ stations[0].slug }}" class="btn-secondary">Edit session</a>
+    <a href="/practice" class="btn-primary">← Practice</a>
+    <form method="post" action="/practice/{{ session.id }}/delete" class="practice-delete-form"
+          onsubmit="return confirm('Delete this session and all recorded attempts?')">
+      <button type="submit" class="btn-danger">Delete session</button>
+    </form>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Practice — {{ session.title or session.session_date.strftime('%b %d') }}{% endblock %}
+
+{% block body %}
+<main class="page-shell practice-entry">
+  <div class="practice-header">
+    <h1 class="page-title">{{ session.title or session.session_date.strftime('%b %d, %Y') }}</h1>
+    <div class="practice-progress">
+      <span class="practice-progress__total">{{ attempts_count }} / {{ total_balls }} balls</span>
+    </div>
+  </div>
+
+  <!-- Station tabs: tap any to view/edit that station -->
+  <nav class="practice-stations" aria-label="Stations">
+    {% for station in stations %}
+    {% set station_attempts = [] %}
+    {% for a in attempts if a.station_slug == station.slug %}{% if station_attempts.append(a) %}{% endif %}{% endfor %}
+    <a href="/practice/{{ session.id }}/station/{{ station.slug }}"
+       class="practice-station-tab{% if station.slug == current_station.slug %} is-active{% elif station_attempts|length == station.balls %} is-done{% endif %}"
+       title="{{ station.name }}">
+      <span class="practice-station-tab__name">{{ station.name }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <!-- Current station detail -->
+  <div class="practice-active-station">
+    <h2 class="practice-active-station__name">{{ current_station.name }}</h2>
+    <p class="practice-active-station__desc">{{ current_station.description }}</p>
+
+    <!-- Ball pips for this station -->
+    <div class="practice-ball-pips">
+      {% for b in range(1, current_station.balls + 1) %}
+      {% set attempt = none %}
+      {% for a in attempts if a.station_slug == current_station.slug and a.attempt_number == b %}
+        {% set attempt = a %}
+      {% endfor %}
+      {% if attempt %}
+      <a href="/practice/{{ session.id }}/station/{{ current_station.slug }}"
+         class="ball-pip ball-pip--done" title="Ball {{ b }}: {{ attempt.strokes }} strokes">
+        {{ attempt.strokes }}
+      </a>
+      {% elif b == current_ball %}
+      <span class="ball-pip ball-pip--active" title="Ball {{ b }}: current">{{ b }}</span>
+      {% else %}
+      <span class="ball-pip" title="Ball {{ b }}">{{ b }}</span>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Stroke entry for current ball -->
+  <div class="practice-strokes">
+    <p class="practice-strokes__prompt">Ball {{ current_ball }} — strokes to hole:</p>
+    <div class="practice-strokes__buttons">
+      {% for n in [1, 2, 3, 4, 5] %}
+      <form method="post" action="/practice/{{ session.id }}/attempt">
+        <input type="hidden" name="station_slug" value="{{ current_station.slug }}">
+        <input type="hidden" name="attempt_number" value="{{ current_ball }}">
+        <input type="hidden" name="strokes" value="{{ n }}">
+        <button type="submit" class="stroke-btn">{{ n }}{% if n == 5 %}+{% endif %}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if session.notes %}
+  <p class="practice-notes">{{ session.notes }}</p>
+  {% endif %}
+</main>
+{% endblock %}

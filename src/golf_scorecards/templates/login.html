@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in · Golf Scorecards{% endblock %}
+
+{% block tabbar %}{% endblock %}
+
+{% block body %}
+<main class="page-shell login-shell">
+  <section class="login-card">
+    <h1>Sign in</h1>
+
+    {% if error %}
+    <p class="login-card__error">Invalid username or password.</p>
+    {% endif %}
+
+    <form method="post" action="/login" class="login-form">
+      <label for="username">Username</label>
+      <input id="username" type="text" name="username" autocomplete="username"
+             autofocus required>
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" autocomplete="current-password"
+             required>
+      <button type="submit">Sign in</button>
+    </form>
+
+    <p class="login-card__hint">
+      Don't have an account? <a href="/register">Register</a>
+    </p>
+  </section>
+</main>
+{% endblock %}

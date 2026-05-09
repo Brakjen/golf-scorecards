@@ -2,16 +2,22 @@
 
 from functools import lru_cache
 from importlib.resources import files
-from pathlib import Path
 
 from starlette.templating import Jinja2Templates
 
+from golf_scorecards.auth.repository import UserRepository
+from golf_scorecards.auth.service import AuthService
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
-from golf_scorecards.export import ExportService
+from golf_scorecards.config import get_settings
 from golf_scorecards.handicap.repository import SlopeRatingsRepository
 from golf_scorecards.handicap.service import HandicapService
-from golf_scorecards.scorecards.builder import ScorecardBuilder
+from golf_scorecards.insights.service import InsightsService
+from golf_scorecards.practice.repository import PracticeRepository
+from golf_scorecards.practice.service import PracticeService
+from golf_scorecards.rounds.repository import RoundRepository
+from golf_scorecards.rounds.service import RoundService
+from golf_scorecards.settings_repo import SettingsRepository
 
 
 def get_templates_directory() -> str:
@@ -31,12 +37,6 @@ def get_catalog_service() -> CatalogService:
 
 
 @lru_cache(maxsize=1)
-def get_scorecard_builder() -> ScorecardBuilder:
-    """Return the singleton scorecard builder."""
-    return ScorecardBuilder()
-
-
-@lru_cache(maxsize=1)
 def get_handicap_service() -> HandicapService:
     """Return the singleton handicap service."""
     return HandicapService(
@@ -51,6 +51,64 @@ def get_templates() -> Jinja2Templates:
 
 
 @lru_cache(maxsize=1)
-def get_export_service() -> ExportService:
-    """Return the singleton PDF export service."""
-    return ExportService(template_dir=Path(get_templates_directory()))
+def get_round_service() -> RoundService:
+    """Return the singleton round service.
+
+    Returns:
+        A ``RoundService`` backed by a ``RoundRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return RoundService(repository=RoundRepository(db_path=settings.db_path))
+
+
+@lru_cache(maxsize=1)
+def get_settings_repo() -> SettingsRepository:
+    """Return the singleton settings repository.
+
+    Returns:
+        A ``SettingsRepository`` configured with the database path
+        from application settings.
+    """
+    settings = get_settings()
+    return SettingsRepository(db_path=settings.db_path)
+
+
+@lru_cache(maxsize=1)
+def get_insights_service() -> InsightsService | None:
+    """Return the singleton insights service, or ``None`` if no API key is set.
+
+    Returns:
+        An ``InsightsService`` if ``OPENAI_API_KEY`` is configured, else ``None``.
+    """
+    settings = get_settings()
+    if not settings.openai_api_key:
+        return None
+    return InsightsService(api_key=settings.openai_api_key, db_path=settings.db_path)
+
+
+@lru_cache(maxsize=1)
+def get_practice_service() -> PracticeService:
+    """Return the singleton practice service.
+
+    Returns:
+        A ``PracticeService`` backed by a ``PracticeRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return PracticeService(repository=PracticeRepository(db_path=settings.db_path))
+
+
+@lru_cache(maxsize=1)
+def get_auth_service() -> AuthService:
+    """Return the singleton auth service.
+
+    Returns:
+        An ``AuthService`` backed by a ``UserRepository`` configured
+        with the database path from application settings.
+    """
+    settings = get_settings()
+    return AuthService(
+        user_repo=UserRepository(db_path=settings.db_path),
+        invite_code=settings.invite_code,
+    )

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Practice — {{ station.name }}{% endblock %}
+
+{% block body %}
+<main class="page-shell practice-entry">
+  <div class="practice-header">
+    <a href="/practice" class="practice-back">← Practice</a>
+    <h1 class="page-title">{{ session.title or session.session_date.strftime('%b %d') }} — {{ station.name }}</h1>
+    <p class="page-subtitle">{{ station.description }}</p>
+  </div>
+
+  <!-- Station tabs -->
+  <nav class="practice-stations" aria-label="Stations">
+    {% for s in stations %}
+    {% set count = session.attempts | selectattr('station_slug', 'equalto', s.slug) | list | length %}
+    <a href="/practice/{{ session.id }}/station/{{ s.slug }}"
+       class="practice-station-tab{% if s.slug == station.slug %} is-active{% endif %}{% if count == s.balls %} is-done{% elif count > 0 %} is-partial{% endif %}"
+       title="{{ s.name }} ({{ count }}/{{ s.balls }})">
+      <span class="practice-station-tab__name">{{ s.name }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <!-- All 7 balls for this station -->
+  <div class="practice-balls-grid">
+    {% for b in range(1, station.balls + 1) %}
+    {% set attempt = station_attempts.get(b) %}
+    <div class="practice-ball-card{% if attempt %} practice-ball-card--done{% endif %}">
+      <div class="practice-ball-card__number">Ball {{ b }}</div>
+      {% if attempt %}
+      <div class="practice-ball-card__edit">
+        <div class="practice-strokes__buttons practice-strokes__buttons--small">
+          {% for n in [1, 2, 3, 4, 5] %}
+          <form method="post" action="/practice/{{ session.id }}/attempt">
+            <input type="hidden" name="station_slug" value="{{ station.slug }}">
+            <input type="hidden" name="attempt_number" value="{{ b }}">
+            <input type="hidden" name="strokes" value="{{ n }}">
+            <input type="hidden" name="return_to" value="/practice/{{ session.id }}/station/{{ station.slug }}">
+            <button type="submit" class="stroke-btn stroke-btn--small{% if attempt.strokes == n %} stroke-btn--selected{% endif %}">{{ n }}{% if n == 5 %}+{% endif %}</button>
+          </form>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="practice-ball-card__empty">
+        <div class="practice-strokes__buttons practice-strokes__buttons--small">
+          {% for n in [1, 2, 3, 4, 5] %}
+          <form method="post" action="/practice/{{ session.id }}/attempt">
+            <input type="hidden" name="station_slug" value="{{ station.slug }}">
+            <input type="hidden" name="attempt_number" value="{{ b }}">
+            <input type="hidden" name="strokes" value="{{ n }}">
+            <input type="hidden" name="return_to" value="/practice/{{ session.id }}/station/{{ station.slug }}">
+            <button type="submit" class="stroke-btn stroke-btn--small">{{ n }}{% if n == 5 %}+{% endif %}</button>
+          </form>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="practice-session-actions">
+    <a href="/practice/{{ session.id }}/summary" class="btn-secondary">View summary</a>
+    <form method="post" action="/practice/{{ session.id }}/delete" class="practice-delete-form"
+          onsubmit="return confirm('Delete this session and all recorded attempts?')">
+      <button type="submit" class="btn-danger">Delete session</button>
+    </form>
+  </div>
+</main>
+{% endblock %}

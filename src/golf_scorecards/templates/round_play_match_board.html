@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Match Play — {{ snapshot.course_name }}{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide play-page">
+  <header class="play-header">
+    <div class="play-header__title">
+      <h1>{{ snapshot.club_name }}</h1>
+      <p class="play-header__sub">
+        {{ snapshot.course_name }} · Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        · {{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}
+        {% endif %}
+      </p>
+    </div>
+    <div class="play-header__actions">
+      <a href="/rounds/{{ round.id }}/edit" class="btn-secondary btn-secondary--sm">Spreadsheet view</a>
+    </div>
+  </header>
+
+  <div class="match-grid-status">
+    <span>vs {{ round.opponent_name or 'Opponent' }}</span>
+    <span class="match-grid-status__score">{{ match_result.result_text }}</span>
+  </div>
+
+  <form method="post" action="/rounds/{{ round.id }}/play/match" class="match-board">
+    <div class="match-board__header">
+      <span class="match-board__col-hole">Hole</span>
+      <span class="match-board__col-par">Par</span>
+      <span class="match-board__col-result">W</span>
+      <span class="match-board__col-result">½</span>
+      <span class="match-board__col-result">L</span>
+      <span class="match-board__col-status">Status</span>
+      <span class="match-board__col-dots"></span>
+    </div>
+
+    {% for hole in holes %}
+    {% set closed = match_result.closed_at and hole.hole_number > match_result.closed_at %}
+    <div class="match-board__row{% if hole.hole_result %} match-board__row--done{% endif %}{% if closed %} match-board__row--closed{% endif %}">
+      <span class="match-board__col-hole">{{ hole.hole_number }}</span>
+      <span class="match-board__col-par">{{ hole.par }}</span>
+      <label class="match-board__radio match-board__radio--win">
+        <input type="radio" name="result_{{ hole.hole_number }}" value="win"
+               {% if hole.hole_result == 'win' %}checked{% endif %}{% if closed %} disabled{% endif %}>
+        <span></span>
+      </label>
+      <label class="match-board__radio match-board__radio--halve">
+        <input type="radio" name="result_{{ hole.hole_number }}" value="halve"
+               {% if hole.hole_result == 'halve' %}checked{% endif %}{% if closed %} disabled{% endif %}>
+        <span></span>
+      </label>
+      <label class="match-board__radio match-board__radio--loss">
+        <input type="radio" name="result_{{ hole.hole_number }}" value="loss"
+               {% if hole.hole_result == 'loss' %}checked{% endif %}{% if closed %} disabled{% endif %}>
+        <span></span>
+      </label>
+      <span class="match-board__col-status" data-hole="{{ hole.hole_number }}">
+        {% if match_result.hole_status and hole.hole_number in match_result.hole_status %}
+        {{ match_result.hole_status[hole.hole_number] }}
+        {% endif %}
+      </span>
+      <span class="match-board__col-dots">
+        {% if stroke_map.get(hole.hole_number, 0) > 0 %}
+        <span class="match-stroke-dot" title="Stroke{{ 's' if stroke_map[hole.hole_number] > 1 }}">{{ '●' * stroke_map[hole.hole_number] }}</span>
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+
+    <div class="match-board__actions">
+      <button type="submit" class="btn-primary">Save</button>
+      <a href="/rounds/{{ round.id }}" class="btn-secondary">Finish &amp; review →</a>
+    </div>
+  </form>
+</main>
+
+<script>
+(function() {
+  const form = document.querySelector('.match-board');
+  const statusEl = document.querySelector('.match-grid-status__score');
+  if (!form || !statusEl) return;
+
+  const totalHoles = {{ holes | length }};
+
+  function updateBoard() {
+    let lead = 0;
+    let played = 0;
+    let closedAt = null;
+
+    for (let n = 1; n <= totalHoles; n++) {
+      const row = form.querySelectorAll('.match-board__row')[n - 1];
+      const statusCell = row.querySelector('.match-board__col-status');
+      const radios = row.querySelectorAll('input[type="radio"]');
+      const checked = form.querySelector(`input[name="result_${n}"]:checked`);
+
+      if (closedAt !== null) {
+        // Match already decided — disable and dim remaining holes
+        row.classList.add('match-board__row--closed');
+        row.classList.remove('match-board__row--done');
+        radios.forEach(r => r.disabled = true);
+        statusCell.textContent = '';
+        continue;
+      }
+
+      radios.forEach(r => r.disabled = false);
+      row.classList.remove('match-board__row--closed');
+
+      if (!checked) {
+        row.classList.remove('match-board__row--done');
+        statusCell.textContent = '';
+        continue;
+      }
+
+      row.classList.add('match-board__row--done');
+      played++;
+      if (checked.value === 'win') lead++;
+      else if (checked.value === 'loss') lead--;
+
+      const remaining = totalHoles - played;
+
+      // Running status
+      if (lead > 0) statusCell.textContent = `${lead} UP`;
+      else if (lead < 0) statusCell.textContent = `${Math.abs(lead)} DN`;
+      else statusCell.textContent = 'AS';
+
+      // Check if match is closed
+      if (Math.abs(lead) > remaining) {
+        closedAt = n;
+      }
+    }
+
+    // Header status text
+    const remaining = totalHoles - played;
+    let text;
+    if (played === 0) {
+      text = '—';
+    } else if (closedAt !== null) {
+      const margin = Math.abs(lead);
+      text = lead > 0 ? `W ${margin}&${remaining}` : `L ${margin}&${remaining}`;
+    } else if (played === totalHoles) {
+      if (lead === 0) text = 'AS';
+      else if (lead > 0) text = `W ${lead} UP`;
+      else text = `L ${Math.abs(lead)} DN`;
+    } else {
+      if (lead === 0) text = `AS thru ${played}`;
+      else if (lead > 0) text = `${lead} UP thru ${played}`;
+      else text = `${Math.abs(lead)} DN thru ${played}`;
+    }
+    statusEl.textContent = text;
+  }
+
+  form.addEventListener('change', updateBoard);
+})();
+</script>
+  });
+})();
+</script>
+{% endblock %}

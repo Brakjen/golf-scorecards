@@ -5,4 +5,4 @@ import uvicorn
 
 def main() -> None:
     """Start the uvicorn development server with live reload."""
-    uvicorn.run("golf_scorecards.main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("golf_scorecards.main:app", host="golf.local", port=8000, reload=True)

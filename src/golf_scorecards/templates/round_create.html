@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}New Round{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <section class="hero-card">
+    <div class="hero-copy">
+      <h1>Enter a round.</h1>
+      <p class="lede">Pick the course and tee you played, then transcribe your paper scorecard into the app.</p>
+    </div>
+
+    <form class="scorecard-form" method="post" action="/rounds">
+      <label>
+        <span>Player name</span>
+        <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+      </label>
+
+      <label>
+        <span>Date played</span>
+        <input type="date" name="round_date" value="">
+      </label>
+
+      <label>
+        <span>Course</span>
+        <select id="course-select" name="course_slug" required>
+          {% for course in course_options %}
+          <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="field-group">
+        <span>Tee</span>
+        <div id="tee-segmented" class="segmented-control"></div>
+        <input type="hidden" id="tee-hidden" name="tee_name" value="">
+      </div>
+
+      <div class="field-group">
+        <span>Holes</span>
+        <div id="holes-segmented" class="segmented-control">
+          <input type="radio" name="holes_played" id="hp-18" value="18" checked>
+          <label for="hp-18">18</label>
+          <input type="radio" name="holes_played" id="hp-front" value="front_9">
+          <label for="hp-front">Front 9</label>
+          <input type="radio" name="holes_played" id="hp-back" value="back_9">
+          <label for="hp-back">Back 9</label>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span>Format</span>
+        <div id="format-segmented" class="segmented-control">
+          <input type="radio" name="scoring_mode" id="sm-stroke" value="stroke" checked>
+          <label for="sm-stroke">Stroke</label>
+          <input type="radio" name="scoring_mode" id="sm-match" value="match_play">
+          <label for="sm-match">Match Play</label>
+          <input type="radio" name="scoring_mode" id="sm-scramble" value="scramble">
+          <label for="sm-scramble">Scramble</label>
+        </div>
+      </div>
+
+      <div id="match-play-fields" style="display:none">
+        <label>
+          <span>Opponent name</span>
+          <input type="text" name="opponent_name" value="" placeholder="Opponent name">
+        </label>
+        <label>
+          <span>Opponent HCI</span>
+          <input type="number" id="opp-hci" name="opponent_handicap" value="" placeholder="e.g. 18.4" step="0.1">
+        </label>
+        <label>
+          <span>Your HCI</span>
+          <input type="number" id="player-hci" name="player_match_hci" value="{{ handicap_index if handicap_index else '' }}" placeholder="e.g. 12.3" step="0.1">
+        </label>
+        <label>
+          <span>HC Allowance %</span>
+          <input type="number" id="hc-allowance" name="hc_allowance" value="100" min="0" max="100" step="1">
+        </label>
+        <p id="strokes-preview" class="match-strokes-preview" style="display:none"></p>
+      </div>
+
+      <div id="scramble-fields" style="display:none">
+        <div class="field-group">
+          <span>Team size</span>
+          <div id="team-size-segmented" class="segmented-control">
+            <input type="radio" name="team_size" id="ts-2" value="2" checked>
+            <label for="ts-2">2</label>
+            <input type="radio" name="team_size" id="ts-3" value="3">
+            <label for="ts-3">3</label>
+            <input type="radio" name="team_size" id="ts-4" value="4">
+            <label for="ts-4">4</label>
+          </div>
+        </div>
+        <label>
+          <span>Your name (First Last)</span>
+          <input type="text" name="teammate_0" class="teammate-input" value="" placeholder="e.g. Bjørn Kjelby">
+        </label>
+        <label class="teammate-label" data-slot="1">
+          <span>Teammate 2</span>
+          <input type="text" name="teammate_1" class="teammate-input" value="" placeholder="First Last">
+        </label>
+        <label class="teammate-label" data-slot="2" style="display:none">
+          <span>Teammate 3</span>
+          <input type="text" name="teammate_2" class="teammate-input" value="" placeholder="First Last">
+        </label>
+        <label class="teammate-label" data-slot="3" style="display:none">
+          <span>Teammate 4</span>
+          <input type="text" name="teammate_3" class="teammate-input" value="" placeholder="First Last">
+        </label>
+      </div>
+
+      <button type="submit" id="submit-btn" disabled>Start entering scores</button>
+    </form>
+  </section>
+
+  <div class="back-link">
+    <a href="/">← Back to home</a>
+  </div>
+</main>
+
+<script>
+  const courseOptions = {{ course_options|tojson }};
+  const courseSelect = document.getElementById("course-select");
+  const teeSegmented = document.getElementById("tee-segmented");
+  const teeHidden = document.getElementById("tee-hidden");
+  const submitBtn = document.getElementById("submit-btn");
+
+  function updateTeeOptions(selectedCourseSlug) {
+    const selectedCourse = courseOptions.find((c) => c.course_slug === selectedCourseSlug);
+    teeSegmented.innerHTML = "";
+    teeHidden.value = "";
+    submitBtn.disabled = true;
+
+    if (!selectedCourse) return;
+
+    selectedCourse.tees.forEach((tee) => {
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "tee_radio";
+      input.id = `tee-${tee.name}`;
+      input.value = tee.name;
+      const label = document.createElement("label");
+      label.htmlFor = `tee-${tee.name}`;
+      label.textContent = tee.name;
+      teeSegmented.appendChild(input);
+      teeSegmented.appendChild(label);
+    });
+  }
+
+  teeSegmented.addEventListener("click", (e) => {
+    const label = e.target.closest("label");
+    if (!label) return;
+    e.preventDefault();
+    const input = document.getElementById(label.htmlFor);
+    if (!input) return;
+    if (input.checked) {
+      input.checked = false;
+      teeHidden.value = "";
+      submitBtn.disabled = true;
+    } else {
+      input.checked = true;
+      teeHidden.value = input.value;
+      submitBtn.disabled = false;
+    }
+    updateStrokesPreview();
+  });
+
+  courseSelect.addEventListener("change", (e) => {
+    updateTeeOptions(e.target.value);
+    updateStrokesPreview();
+  });
+
+  updateTeeOptions(courseSelect.value);
+
+  // Match play / Scramble toggle
+  const matchFields = document.getElementById("match-play-fields");
+  const scrambleFields = document.getElementById("scramble-fields");
+  document.getElementById("format-segmented").addEventListener("change", (e) => {
+    const mode = e.target.value;
+    matchFields.style.display = mode === "match_play" ? "" : "none";
+    scrambleFields.style.display = mode === "scramble" ? "" : "none";
+    if (mode === "match_play") submitBtn.textContent = "Start match";
+    else if (mode === "scramble") submitBtn.textContent = "Start scramble";
+    else submitBtn.textContent = "Start entering scores";
+  });
+
+  // Scramble team size toggle
+  document.getElementById("team-size-segmented").addEventListener("change", (e) => {
+    const size = parseInt(e.target.value);
+    document.querySelectorAll(".teammate-label").forEach((el) => {
+      const slot = parseInt(el.dataset.slot);
+      el.style.display = slot < size ? "" : "none";
+    });
+  });
+
+  // Strokes preview calculation
+  const oppHci = document.getElementById("opp-hci");
+  const playerHci = document.getElementById("player-hci");
+  const strokesPreview = document.getElementById("strokes-preview");
+
+  function getSelectedTeeData() {
+    const teeName = teeHidden.value;
+    if (!teeName) return null;
+    const course = courseOptions.find((c) => c.course_slug === courseSelect.value);
+    if (!course) return null;
+    return course.tees.find((t) => t.name === teeName) || null;
+  }
+
+  function getAllowance() {
+    const val = parseInt(document.getElementById("hc-allowance").value);
+    return isNaN(val) ? 100 : val;
+  }
+
+  function computeCourseHC(hci, tee) {
+    if (!tee || !tee.slope || !tee.cr) return null;
+    return Math.round(hci * (tee.slope / 113) + (tee.cr - tee.par));
+  }
+
+  function updateStrokesPreview() {
+    const pVal = parseFloat(playerHci.value);
+    const oVal = parseFloat(oppHci.value);
+    const tee = getSelectedTeeData();
+    if (isNaN(pVal) || isNaN(oVal) || !tee) {
+      strokesPreview.style.display = "none";
+      return;
+    }
+    const allowance = getAllowance();
+    const pAdj = pVal * allowance / 100;
+    const oAdj = oVal * allowance / 100;
+    const pCH = computeCourseHC(pAdj, tee);
+    const oCH = computeCourseHC(oAdj, tee);
+    if (pCH === null || oCH === null) {
+      strokesPreview.style.display = "none";
+      return;
+    }
+    const strokes = oCH - pCH;
+    const desc = strokes > 0
+      ? `You give ${strokes} stroke${strokes !== 1 ? "s" : ""}`
+      : strokes < 0
+        ? `You receive ${Math.abs(strokes)} stroke${Math.abs(strokes) !== 1 ? "s" : ""}`
+        : "No strokes given";
+    strokesPreview.textContent = `${desc} (Course HC: you ${pCH}, opp ${oCH})`;
+    strokesPreview.style.display = "";
+  }
+
+  oppHci.addEventListener("input", updateStrokesPreview);
+  playerHci.addEventListener("input", updateStrokesPreview);
+  document.getElementById("hc-allowance").addEventListener("input", updateStrokesPreview);
+</script>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Scramble — {{ snapshot.course_name }}{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide play-page">
+  <header class="play-header">
+    <div class="play-header__title">
+      <h1>{{ snapshot.club_name }}</h1>
+      <p class="play-header__sub">
+        {{ snapshot.course_name }} · Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        · {{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}
+        {% endif %}
+        · {{ round.team_size }}-man scramble
+      </p>
+    </div>
+    <div class="play-header__actions">
+      <a href="/rounds/{{ round.id }}/edit" class="btn-secondary btn-secondary--sm">Spreadsheet view</a>
+    </div>
+  </header>
+
+  <div class="scramble-team-bar">
+    {% for t in teammate_tags %}
+    <span class="scramble-tag-pill" data-tag="{{ t.tag }}">{{ t.tag }} <small>{{ t.name }}</small></span>
+    {% endfor %}
+  </div>
+
+  <form method="post" action="/rounds/{{ round.id }}/play/scramble" class="scramble-board">
+    <div class="scramble-board__header">
+      <span class="scramble-board__col-hole">Hole</span>
+      <span class="scramble-board__col-par">Par</span>
+      <span class="scramble-board__col-score">Score</span>
+      <span class="scramble-board__col-putts">Putts</span>
+      <span class="scramble-board__col-drive">Drive</span>
+    </div>
+
+    {% for hole in holes %}
+    <div class="scramble-board__row{% if hole.score is not none %} scramble-board__row--done{% endif %}">
+      <span class="scramble-board__col-hole">{{ hole.hole_number }}</span>
+      <span class="scramble-board__col-par">{{ hole.par }}</span>
+      <label class="scramble-board__input">
+        <input type="number" name="score_{{ hole.hole_number }}" value="{{ hole.score if hole.score is not none else '' }}" min="1" max="15" inputmode="numeric">
+      </label>
+      <label class="scramble-board__input">
+        <input type="number" name="putts_{{ hole.hole_number }}" value="{{ hole.putts if hole.putts is not none else '' }}" min="0" max="6" inputmode="numeric">
+      </label>
+      <div class="scramble-board__drive-select">
+        {% for t in teammate_tags %}
+        <label class="scramble-drive-btn">
+          <input type="radio" name="drive_{{ hole.hole_number }}" value="{{ t.tag }}"
+                 {% if hole.drive_used == t.tag %}checked{% endif %}>
+          <span>{{ t.tag }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="scramble-board__actions">
+      <button type="submit" class="btn-primary">Save</button>
+      <a href="/rounds/{{ round.id }}" class="btn-secondary">Finish &amp; review →</a>
+    </div>
+  </form>
+</main>
+
+<script>
+(function() {
+  const form = document.querySelector('.scramble-board');
+  if (!form) return;
+
+  function updateBoard() {
+    let totalScore = 0;
+    let totalPar = 0;
+    let filled = 0;
+
+    form.querySelectorAll('.scramble-board__row').forEach(row => {
+      const scoreInput = row.querySelector('input[type="number"][name^="score_"]');
+      const score = parseInt(scoreInput?.value);
+      const par = parseInt(row.querySelector('.scramble-board__col-par')?.textContent);
+      if (!isNaN(score)) {
+        filled++;
+        totalScore += score;
+        totalPar += par;
+        row.classList.add('scramble-board__row--done');
+      } else {
+        row.classList.remove('scramble-board__row--done');
+      }
+    });
+  }
+
+  form.addEventListener('input', updateBoard);
+  form.addEventListener('change', updateBoard);
+})();
+</script>
+{% endblock %}

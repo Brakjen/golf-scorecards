@@ -26,6 +26,34 @@ uv run ruff check .
 uv run mypy src
 ```
 
+## Deploy to Fly.io
+
+The repo ships a `Dockerfile` and `fly.toml` for a single-machine, single-volume
+deployment (SQLite). One-time setup:
+
+```bash
+# 1. Create the app (pick a unique name)
+fly apps create golf-scorecards-<yourhandle>
+# Edit fly.toml `app = "..."` to match.
+
+# 2. Create the persistent volume in the same region as the app
+fly volumes create golf_data --region arn --size 1
+
+# 3. Set the required secrets
+fly secrets set \
+  APP_PASSWORD="$(openssl rand -base64 18)" \
+  SESSION_SECRET="$(openssl rand -hex 32)" \
+  OPENAI_API_KEY="sk-..."
+
+# 4. Deploy
+fly deploy
+```
+
+Subsequent deploys are just `fly deploy`. The container listens on `:8080`,
+serves `/health` for Fly's checks, and writes the SQLite DB to the
+`/data` volume.
+
+
 ## Current scope
 
 The initial scaffold includes:

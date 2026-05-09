@@ -1,204 +1,246 @@
 {% extends "base.html" %}
 
-{% block title %}Create Scorecard{% endblock %}
+{% block title %}Play – Golf Scorecards{% endblock %}
 
 {% block body %}
 <main class="page-shell">
-  <section class="hero-card">
-    <div class="hero-copy">
-      <h1>Generate a printable golf scorecard.</h1>
-      <p class="lede">Choose your course and tee, then download a scorecard to take to the course. Add a target score or handicap to personalise the card.</p>
-      <img class="hero-image" src="/static/golfcourse.png" alt="Golf course">
-    </div>
+  <h1 class="page-title">Enter Round</h1>
+  <p class="page-subtitle">Transcribe your paper scorecard into the app to track stats over time.</p>
 
-    <form class="scorecard-form" method="post" action="/scorecards/preview">
-      <label>
-        <span>Player name</span>
-        <input type="text" name="player_name" value="" placeholder="Player name (optional)">
-      </label>
+  <div class="play-form-card">
 
-      <label>
-        <span>Course</span>
-        <select id="course-select" name="course_slug" required>
-          {% for course in course_options %}
-          <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      <form class="scorecard-form" method="post" action="/rounds">
+        <label>
+          <span>Player name</span>
+          <input type="text" name="player_name" value="" placeholder="Player name (optional)">
+        </label>
 
-      <div class="field-group">
-        <span>Tee</span>
-        <div id="tee-segmented" class="segmented-control"></div>
-      </div>
+        <label>
+          <span>Date played</span>
+          <input type="date" name="round_date" value="">
+        </label>
 
-      <div class="field-group">
-        <span>Scoring mode</span>
-        <div id="scoring-mode-segmented" class="segmented-control">
-          <input type="radio" name="scoring_mode" id="mode-stroke" value="stroke" checked>
-          <label for="mode-stroke">Stroke play</label>
-          <input type="radio" name="scoring_mode" id="mode-stableford" value="stableford">
-          <label for="mode-stableford">Stableford</label>
+        <label>
+          <span>Course</span>
+          <select id="round-course-select" name="course_slug" required>
+            {% for course in course_options %}
+            <option value="{{ course.course_slug }}" {% if course.course_slug == initial_course_slug %}selected{% endif %}>{{ course.display_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="field-group">
+          <span>Tee</span>
+          <div id="round-tee-segmented" class="segmented-control"></div>
+          <input type="hidden" id="round-tee-hidden" name="tee_name" value="">
         </div>
-      </div>
 
-      <label id="target-score-field">
-        <span>Target score</span>
-        <input type="number" name="target_score" min="1" max="200" placeholder="Optional, for adjusted par">
-        <small class="field-help">Used only in stroke play to build an adjusted-par strategy line.</small>
-      </label>
+        <div class="field-group">
+          <span>Holes</span>
+          <div id="round-holes-segmented" class="segmented-control">
+            <input type="radio" name="holes_played" id="hp-18" value="18" checked>
+            <label for="hp-18">18</label>
+            <input type="radio" name="holes_played" id="hp-front" value="front_9">
+            <label for="hp-front">Front 9</label>
+            <input type="radio" name="holes_played" id="hp-back" value="back_9">
+            <label for="hp-back">Back 9</label>
+          </div>
+        </div>
 
-      <label id="handicap-field">
-        <span>Handicap index</span>
-        <input type="text" name="handicap_index" inputmode="decimal" placeholder="Optional, e.g. 18.4 or +1.2">
-        <small class="field-help">Use this for Stableford or any round where strokes received should be shown.</small>
-      </label>
+        <div class="field-group">
+          <span>Format</span>
+          <div id="round-format-segmented" class="segmented-control">
+            <input type="radio" name="scoring_mode" id="home-sm-stroke" value="stroke" checked>
+            <label for="home-sm-stroke">Stroke</label>
+            <input type="radio" name="scoring_mode" id="home-sm-match" value="match_play">
+            <label for="home-sm-match">Match Play</label>
+            <input type="radio" name="scoring_mode" id="home-sm-scramble" value="scramble">
+            <label for="home-sm-scramble">Scramble</label>
+          </div>
+        </div>
 
-      <button type="submit">Preview scorecard</button>
-    </form>
-  </section>
+        <div id="home-match-play-fields" style="display:none">
+          <label>
+            <span>Opponent name</span>
+            <input type="text" name="opponent_name" value="" placeholder="Opponent name">
+          </label>
+          <label>
+            <span>Opponent HCI</span>
+            <input type="number" id="home-opp-hci" name="opponent_handicap" value="" placeholder="e.g. 18.4" step="0.1">
+          </label>
+          <label>
+            <span>Your HCI</span>
+            <input type="number" id="home-player-hci" name="player_match_hci" value="{{ handicap_index if handicap_index else '' }}" placeholder="e.g. 12.3" step="0.1">
+          </label>
+          <label>
+            <span>HC Allowance %</span>
+            <input type="number" id="home-hc-allowance" name="hc_allowance" value="100" min="0" max="100" step="1">
+          </label>
+          <p id="home-strokes-preview" class="match-strokes-preview" style="display:none"></p>
+        </div>
+
+        <div id="home-scramble-fields" style="display:none">
+          <div class="field-group">
+            <span>Team size</span>
+            <div id="home-team-size-segmented" class="segmented-control">
+              <input type="radio" name="team_size" id="home-ts-2" value="2" checked>
+              <label for="home-ts-2">2</label>
+              <input type="radio" name="team_size" id="home-ts-3" value="3">
+              <label for="home-ts-3">3</label>
+              <input type="radio" name="team_size" id="home-ts-4" value="4">
+              <label for="home-ts-4">4</label>
+            </div>
+          </div>
+          <label>
+            <span>Your name (First Last)</span>
+            <input type="text" name="teammate_0" class="home-teammate-input" value="" placeholder="e.g. Bjørn Kjelby">
+          </label>
+          <label class="home-teammate-label" data-slot="1">
+            <span>Teammate 2</span>
+            <input type="text" name="teammate_1" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
+          <label class="home-teammate-label" data-slot="2" style="display:none">
+            <span>Teammate 3</span>
+            <input type="text" name="teammate_2" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
+          <label class="home-teammate-label" data-slot="3" style="display:none">
+            <span>Teammate 4</span>
+            <input type="text" name="teammate_3" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
+        </div>
+
+        <button type="submit" id="round-submit-btn" disabled>Start entering scores</button>
+      </form>
+  </div>
 </main>
 
 <script>
   const courseOptions = {{ course_options|tojson }};
-  const initialTeeName = {{ initial_tee_name|tojson }};
-  const courseSelect = document.getElementById("course-select");
-  const teeSegmented = document.getElementById("tee-segmented");
-  const scoringModeSegmented = document.getElementById("scoring-mode-segmented");
-  const stablefordRadio = document.getElementById("mode-stableford");
-  const targetScoreField = document.getElementById("target-score-field");
-  const targetScoreInput = targetScoreField.querySelector("input");
-  const handicapField = document.getElementById("handicap-field");
-  const handicapInput = handicapField.querySelector("input");
 
-  function getSelectedRadio(name) {
-    const checked = document.querySelector(`input[name="${name}"]:checked`);
-    return checked ? checked.value : null;
-  }
+  // ── Round creation form (Enter Round card) ──
+  const roundCourseSelect = document.getElementById("round-course-select");
+  const roundTeeSegmented = document.getElementById("round-tee-segmented");
+  const roundTeeHidden = document.getElementById("round-tee-hidden");
+  const roundSubmitBtn = document.getElementById("round-submit-btn");
 
-  function updateTeeOptions(selectedCourseSlug) {
-    const selectedCourse = courseOptions.find((course) => course.course_slug === selectedCourseSlug);
-    teeSegmented.innerHTML = "";
-
-    if (!selectedCourse) {
-      return;
-    }
-
-    selectedCourse.tees.forEach((teeName, index) => {
+  function updateRoundTeeOptions(slug) {
+    const course = courseOptions.find((c) => c.course_slug === slug);
+    roundTeeSegmented.innerHTML = "";
+    roundTeeHidden.value = "";
+    roundSubmitBtn.disabled = true;
+    if (!course) return;
+    course.tees.forEach((tee) => {
       const input = document.createElement("input");
       input.type = "radio";
-      input.name = "tee_name";
-      input.id = `tee-${teeName}`;
-      input.value = teeName;
+      input.name = "round_tee_radio";
+      input.id = `round-tee-${tee.name}`;
+      input.value = tee.name;
       const label = document.createElement("label");
-      label.htmlFor = `tee-${teeName}`;
-      label.textContent = teeName;
-      teeSegmented.appendChild(input);
-      teeSegmented.appendChild(label);
+      label.htmlFor = `round-tee-${tee.name}`;
+      label.textContent = tee.name;
+      roundTeeSegmented.appendChild(input);
+      roundTeeSegmented.appendChild(label);
     });
   }
 
-  function updateModeFields(scoringMode) {
-    const isStableford = scoringMode === "stableford";
-    targetScoreInput.disabled = isStableford;
-    targetScoreField.classList.toggle("is-disabled", isStableford);
-  }
-
-  function updateTeeState() {
-    const hasTee = !!getSelectedRadio("tee_name");
-    stablefordRadio.disabled = !hasTee;
-    handicapInput.disabled = !hasTee;
-    handicapField.classList.toggle("is-disabled", !hasTee);
-    if (!hasTee) {
-      const currentMode = getSelectedRadio("scoring_mode");
-      if (currentMode === "stableford") {
-        document.getElementById("mode-stroke").checked = true;
-        updateModeFields("stroke");
-      }
-      handicapInput.value = "";
-    }
-  }
-
-  // ── sessionStorage form cache ──
-  const STORAGE_KEY = "scorecard_form";
-  const form = document.querySelector(".scorecard-form");
-
-  function saveForm() {
-    const data = {
-      player_name: form.elements["player_name"].value,
-      course_slug: form.elements["course_slug"].value,
-      tee_name: getSelectedRadio("tee_name"),
-      scoring_mode: getSelectedRadio("scoring_mode"),
-      target_score: form.elements["target_score"].value,
-      handicap_index: form.elements["handicap_index"].value,
-    };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  function restoreForm() {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    try {
-      const data = JSON.parse(raw);
-
-      if (data.course_slug) {
-        courseSelect.value = data.course_slug;
-        updateTeeOptions(data.course_slug);
-      }
-      if (data.tee_name) {
-        const radio = document.getElementById(`tee-${data.tee_name}`);
-        if (radio) radio.checked = true;
-      }
-      if (data.scoring_mode) {
-        const modeRadio = document.getElementById(`mode-${data.scoring_mode}`);
-        if (modeRadio) { modeRadio.checked = true; updateModeFields(data.scoring_mode); }
-      }
-
-      ["player_name", "target_score", "handicap_index"].forEach((name) => {
-        if (data[name] != null && data[name] !== "") {
-          const el = form.elements[name];
-          if (el) el.value = data[name];
-        }
-      });
-    } catch { /* ignore corrupt data */ }
-  }
-
-  // Initialise
-  updateTeeOptions(courseSelect.value);
-  updateModeFields(getSelectedRadio("scoring_mode") || "stroke");
-  restoreForm();
-  updateTeeState();
-
-  // Toggle behaviour for tee: click a selected radio to deselect it
-  teeSegmented.addEventListener("click", (e) => {
+  roundTeeSegmented.addEventListener("click", (e) => {
     const label = e.target.closest("label");
     if (!label) return;
     e.preventDefault();
     const input = document.getElementById(label.htmlFor);
     if (!input) return;
-    input.checked = !input.checked;
-    updateTeeState();
-    saveForm();
+    if (input.checked) {
+      input.checked = false;
+      roundTeeHidden.value = "";
+      roundSubmitBtn.disabled = true;
+    } else {
+      input.checked = true;
+      roundTeeHidden.value = input.value;
+      roundSubmitBtn.disabled = false;
+    }
+    updateHomeStrokesPreview();
   });
 
-  // Scoring mode: standard radio behaviour (no deselect)
-  scoringModeSegmented.addEventListener("click", (e) => {
-    const label = e.target.closest("label");
-    if (!label) return;
-    e.preventDefault();
-    const input = document.getElementById(label.htmlFor);
-    if (!input || input.disabled) return;
-    input.checked = true;
-    updateModeFields(input.value);
-    saveForm();
+  roundCourseSelect.addEventListener("change", (e) => {
+    updateRoundTeeOptions(e.target.value);
+    updateHomeStrokesPreview();
   });
 
-  form.addEventListener("input", saveForm);
-  form.addEventListener("change", saveForm);
+  updateRoundTeeOptions(roundCourseSelect.value);
 
-  courseSelect.addEventListener("change", (event) => {
-    updateTeeOptions(event.target.value);
-    updateTeeState();
-    saveForm();
+  // Match play / Scramble toggle
+  const homeMatchFields = document.getElementById("home-match-play-fields");
+  const homeScrambleFields = document.getElementById("home-scramble-fields");
+  document.getElementById("round-format-segmented").addEventListener("change", (e) => {
+    const mode = e.target.value;
+    homeMatchFields.style.display = mode === "match_play" ? "" : "none";
+    homeScrambleFields.style.display = mode === "scramble" ? "" : "none";
+    if (mode === "match_play") roundSubmitBtn.textContent = "Start match";
+    else if (mode === "scramble") roundSubmitBtn.textContent = "Start scramble";
+    else roundSubmitBtn.textContent = "Start entering scores";
   });
+
+  // Scramble team size toggle
+  document.getElementById("home-team-size-segmented").addEventListener("change", (e) => {
+    const size = parseInt(e.target.value);
+    document.querySelectorAll(".home-teammate-label").forEach((el) => {
+      const slot = parseInt(el.dataset.slot);
+      el.style.display = slot < size ? "" : "none";
+    });
+  });
+
+  // Strokes preview calculation
+  const homeOppHci = document.getElementById("home-opp-hci");
+  const homePlayerHci = document.getElementById("home-player-hci");
+  const homeStrokesPreview = document.getElementById("home-strokes-preview");
+
+  function getHomeSelectedTeeData() {
+    const teeName = roundTeeHidden.value;
+    if (!teeName) return null;
+    const course = courseOptions.find((c) => c.course_slug === roundCourseSelect.value);
+    if (!course) return null;
+    return course.tees.find((t) => t.name === teeName) || null;
+  }
+
+  function getHomeAllowance() {
+    const val = parseInt(document.getElementById("home-hc-allowance").value);
+    return isNaN(val) ? 100 : val;
+  }
+
+  function computeCourseHC(hci, tee) {
+    if (!tee || !tee.slope || !tee.cr) return null;
+    return Math.round(hci * (tee.slope / 113) + (tee.cr - tee.par));
+  }
+
+  function updateHomeStrokesPreview() {
+    const pVal = parseFloat(homePlayerHci.value);
+    const oVal = parseFloat(homeOppHci.value);
+    const tee = getHomeSelectedTeeData();
+    if (isNaN(pVal) || isNaN(oVal) || !tee) {
+      homeStrokesPreview.style.display = "none";
+      return;
+    }
+    const allowance = getHomeAllowance();
+    const pAdj = pVal * allowance / 100;
+    const oAdj = oVal * allowance / 100;
+    const pCH = computeCourseHC(pAdj, tee);
+    const oCH = computeCourseHC(oAdj, tee);
+    if (pCH === null || oCH === null) {
+      homeStrokesPreview.style.display = "none";
+      return;
+    }
+    const strokes = oCH - pCH;
+    const desc = strokes > 0
+      ? `You give ${strokes} stroke${strokes !== 1 ? "s" : ""}`
+      : strokes < 0
+        ? `You receive ${Math.abs(strokes)} stroke${Math.abs(strokes) !== 1 ? "s" : ""}`
+        : "No strokes given";
+    homeStrokesPreview.textContent = `${desc} (Course HC: you ${pCH}, opp ${oCH})`;
+    homeStrokesPreview.style.display = "";
+  }
+
+  homeOppHci.addEventListener("input", updateHomeStrokesPreview);
+  homePlayerHci.addEventListener("input", updateHomeStrokesPreview);
+  document.getElementById("home-hc-allowance").addEventListener("input", updateHomeStrokesPreview);
 </script>
 {% endblock %}

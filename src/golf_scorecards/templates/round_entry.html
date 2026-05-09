@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Enter Round — {{ snapshot.course_name }} ({{ snapshot.tee_name }}){% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide">
+  <div class="entry-header">
+    <div>
+      <h1>{{ snapshot.club_name }} — {{ snapshot.course_name }}</h1>
+      <p class="entry-meta">
+        Tee {{ snapshot.tee_name }}
+        {% if round.holes_played != '18' %}
+        <span class="holes-badge">{{ 'Front 9' if round.holes_played == 'front_9' else 'Back 9' }}</span>
+        {% endif %}
+        {% if round.player_name %} · {{ round.player_name }}{% endif %}
+        · {{ round.round_date.isoformat() }}
+        {% if round.handicap_index is not none %} · HCI {{ round.handicap_index }}{% endif %}
+        {% if round.playing_handicap is not none %} · PH {{ round.playing_handicap }}{% endif %}
+      </p>
+    </div>
+    <a href="/rounds/{{ round.id }}/play" class="btn-back">← Play view</a>
+  </div>
+
+  <form method="post" action="/rounds/{{ round.id }}" class="entry-form">
+    <div class="entry-handicap">
+      <label for="hci-input" class="entry-handicap__label">HCI</label>
+      <input type="number" id="hci-input" name="handicap_index"
+             value="{{ round.handicap_index if round.handicap_index is not none else '' }}"
+             step="0.1" min="0" max="54" class="input-num input-hci">
+    </div>
+
+    <div class="entry-grid-wrapper">
+      <table class="entry-grid">
+        <thead>
+          <tr>
+            <th class="col-hole">Hole</th>
+            <th class="col-par">Par</th>
+            <th class="col-dist">Dist</th>
+            <th class="col-hcp">HCP</th>
+            <th class="col-pen">Stk</th>
+            <th class="col-score">Score</th>
+            <th class="col-pen">Pts</th>
+            <th class="col-check">SZ</th>
+            <th class="col-check">D3</th>
+            <th class="col-miss">Grn Miss</th>
+            <th class="col-check">U&D</th>
+            <th class="col-putts">Putts</th>
+            <th class="col-pen">NFS</th>
+            <th class="col-pen">Pen</th>
+            <th class="col-notes">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hole in round.holes %}
+          {% if hole.hole_number == 10 and round.holes_played == '18' %}
+          <tr class="turn-row">
+            <td colspan="15">Turn</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td class="cell-fixed">{{ hole.hole_number }}</td>
+            <td class="cell-fixed">{{ hole.par }}</td>
+            <td class="cell-fixed">{{ hole.distance }}</td>
+            <td class="cell-fixed">{{ hole.handicap }}</td>
+            <td class="cell-fixed">{{ strokes_map.get(hole.hole_number, '') }}</td>
+            <td>
+              <input type="number" name="score_{{ hole.hole_number }}"
+                     value="{{ hole.score if hole.score is not none else '' }}"
+                     min="1" max="20" class="input-num input-score" data-hole="{{ hole.hole_number }}">
+            </td>
+            <td class="cell-fixed stableford-cell" data-hole="{{ hole.hole_number }}" data-par="{{ hole.par }}" data-stk="{{ strokes_map.get(hole.hole_number, 0) }}">{{ stableford.get(hole.hole_number, '') if stableford.get(hole.hole_number) is not none else '' }}</td>
+            <td>
+              <input type="checkbox" name="sz_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.sz_in_reg %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="checkbox" name="d3_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.down_in_3 %}checked{% endif %}>
+            </td>
+            <td>
+              <select name="miss_{{ hole.hole_number }}" class="input-miss">
+                <option value="">—</option>
+                <option value="left" {% if hole.miss_direction == 'left' %}selected{% endif %}>L</option>
+                <option value="right" {% if hole.miss_direction == 'right' %}selected{% endif %}>R</option>
+                <option value="short" {% if hole.miss_direction == 'short' %}selected{% endif %}>S</option>
+                <option value="long" {% if hole.miss_direction == 'long' %}selected{% endif %}>Lo</option>
+              </select>
+            </td>
+            <td>
+              <input type="checkbox" name="ud_{{ hole.hole_number }}" value="1"
+                     tabindex="0" {% if hole.up_and_down %}checked{% endif %}>
+            </td>
+            <td>
+              <input type="number" name="putts_{{ hole.hole_number }}"
+                     value="{{ hole.putts if hole.putts is not none else '' }}"
+                     min="0" max="10" class="input-num input-putts" data-hole="{{ hole.hole_number }}">
+            </td>
+            <td>
+              <input type="number" name="nfs_{{ hole.hole_number }}"
+                     value="{{ hole.nfs if hole.nfs is not none else '' }}"
+                     min="0" max="10" class="input-num input-nfs">
+            </td>
+            <td>
+              <input type="number" name="penalty_{{ hole.hole_number }}"
+                     value="{{ hole.penalty_strokes if hole.penalty_strokes is not none else '' }}"
+                     min="0" max="10" class="input-num input-pen">
+            </td>
+            <td>
+              <textarea name="notes_{{ hole.hole_number }}"
+                        class="input-notes" placeholder="…"
+                        rows="1">{{ hole.notes or '' }}</textarea>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Tot</th>
+            <th id="tot-par">{{ snapshot.par_total or '' }}</th>
+            <th id="tot-dist">{{ snapshot.total_distance or '' }}</th>
+            <th></th>
+            <th></th>
+            <th id="tot-score">—</th>
+            <th id="tot-pts">—</th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th id="tot-ud">—</th>
+            <th id="tot-putts">—</th>
+            <th id="tot-nfs">—</th>
+            <th id="tot-pen">—</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="entry-actions">
+      <button type="submit" class="btn-save">Save round</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  /* Auto-compute totals as the user enters data. */
+  const grid = document.querySelector(".entry-grid");
+
+  function sumInputs(selector) {
+    let total = 0;
+    let count = 0;
+    grid.querySelectorAll(selector).forEach((el) => {
+      const v = parseInt(el.value, 10);
+      if (!isNaN(v)) { total += v; count++; }
+    });
+    return count > 0 ? total : null;
+  }
+
+  function countChecked(namePrefix, total) {
+    let checked = 0;
+    let applicable = 0;
+    for (let i = 1; i <= 18; i++) {
+      const el = grid.querySelector(`[name="${namePrefix}${i}"]`);
+      if (el) {
+        applicable++;
+        if (el.checked) checked++;
+      }
+    }
+    return applicable > 0 ? `${checked}/${applicable}` : "—";
+  }
+
+  function updateTotals() {
+    const score = sumInputs(".input-score");
+    const putts = sumInputs(".input-putts");
+    const nfs = sumInputs(".input-nfs");
+    const pen = sumInputs(".input-pen");
+
+    document.getElementById("tot-score").textContent = score !== null ? score : "—";
+    document.getElementById("tot-putts").textContent = putts !== null ? putts : "—";
+    document.getElementById("tot-nfs").textContent = nfs !== null ? nfs : "—";
+    document.getElementById("tot-pen").textContent = pen !== null ? pen : "—";
+    document.getElementById("tot-ud").textContent = countChecked("ud_", 18);
+
+    /* Stableford points per hole */
+    let totalPts = 0;
+    let ptsCount = 0;
+    grid.querySelectorAll(".stableford-cell").forEach((cell) => {
+      const hole = cell.dataset.hole;
+      const par = parseInt(cell.dataset.par, 10);
+      const stk = parseInt(cell.dataset.stk, 10) || 0;
+      const scoreEl = grid.querySelector(`[name="score_${hole}"]`);
+      const sv = parseInt(scoreEl.value, 10);
+      if (!isNaN(sv)) {
+        const net = sv - stk;
+        const pts = Math.max(0, 2 - (net - par));
+        cell.textContent = pts;
+        totalPts += pts;
+        ptsCount++;
+      } else {
+        cell.textContent = "";
+      }
+    });
+    document.getElementById("tot-pts").textContent = ptsCount > 0 ? totalPts : "—";
+  }
+
+  grid.addEventListener("input", updateTotals);
+  grid.addEventListener("change", updateTotals);
+  updateTotals();
+</script>
+{% endblock %}
