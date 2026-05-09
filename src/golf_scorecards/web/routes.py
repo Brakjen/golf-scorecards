@@ -148,7 +148,7 @@ async def _build_home_context(
     """
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
-    initial_tee = initial_course["tees"][0]
+    initial_tee = initial_course["tees"][0]["name"]
 
     summaries = await round_service.list_rounds()
     recent = summaries[:3]
@@ -234,7 +234,7 @@ async def round_create_form(
     """
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
-    initial_tee = initial_course["tees"][0]
+    initial_tee = initial_course["tees"][0]["name"]
 
     return cast(
         HTMLResponse,

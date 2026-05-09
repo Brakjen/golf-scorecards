@@ -6,13 +6,21 @@ from golf_scorecards.catalog.models import Course, Tee
 from golf_scorecards.catalog.repository import CourseCatalogRepository
 
 
+class TeeDetail(TypedDict):
+    """Tee info including ratings for JS calculation."""
+    name: str
+    par: int
+    slope: int | None
+    cr: float | None
+
+
 class CourseOption(TypedDict):
     """Serialisable summary of a course for form dropdowns."""
     course_slug: str
     club_name: str
     course_name: str
     display_name: str
-    tees: list[str]
+    tees: list[TeeDetail]
 
 
 class CatalogLookupError(ValueError):
@@ -54,13 +62,24 @@ class CatalogService:
 
     def list_course_options(self) -> list[CourseOption]:
         """Return lightweight course summaries for form dropdowns."""
-        return [
-            {
+        options: list[CourseOption] = []
+        for course in self._catalog.courses:
+            tee_details: list[TeeDetail] = []
+            for tee in course.tees:
+                men_rating = next(
+                    (r for r in tee.ratings if r.gender == "men"), None,
+                )
+                tee_details.append({
+                    "name": tee.tee_name,
+                    "par": tee.par_total,
+                    "slope": men_rating.slope_rating if men_rating else None,
+                    "cr": men_rating.course_rating if men_rating else None,
+                })
+            options.append({
                 "course_slug": course.course_slug,
                 "club_name": course.club_name,
                 "course_name": course.course_name,
                 "display_name": f"{course.club_name} - {course.course_name}",
-                "tees": [tee.tee_name for tee in course.tees],
-            }
-            for course in self._catalog.courses
-        ]
+                "tees": tee_details,
+            })
+        return options

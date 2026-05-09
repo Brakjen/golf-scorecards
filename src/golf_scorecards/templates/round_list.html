@@ -27,6 +27,15 @@
       <div class="round-card__player">{{ r.player_name }}</div>
       {% endif %}
       <div class="round-card__stats">
+        {% if r.scoring_mode == 'match_play' %}
+        <span class="stat-pill stat-pill--match">Match Play</span>
+        {% if r.opponent_name %}
+        <span class="stat-pill stat-pill--muted">vs {{ r.opponent_name }}</span>
+        {% endif %}
+        {% if match_results.get(r.id) %}
+        <span class="stat-pill stat-pill--blue">{{ match_results[r.id] }}</span>
+        {% endif %}
+        {% else %}
         {% if r.total_score is not none %}
         <span class="stat-pill stat-pill--blue">{{ r.total_score }}</span>
         {% endif %}
@@ -45,6 +54,7 @@
         {% endif %}
         {% if r.three_putt_count %}
         <span class="stat-pill stat-pill--bad">3putt {{ r.three_putt_count }}</span>
+        {% endif %}
         {% endif %}
       </div>
       <div class="round-card__actions">

@@ -28,7 +28,30 @@
     </div>
   </div>
 
-  {% if stats.total_score is not none %}
+  {% if round.scoring_mode == 'match_play' %}
+  <!-- ── Match play stat bar ─────────────────────────────── -->
+  {% if match_result %}
+  <div class="stat-bar">
+    <div class="stat-block">
+      <span class="stat-block__value">{{ match_result.result_text }}</span>
+      <span class="stat-block__label">Result</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ match_result.holes_won }}</span>
+      <span class="stat-block__label">Won</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ match_result.holes_lost }}</span>
+      <span class="stat-block__label">Lost</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ match_result.holes_halved }}</span>
+      <span class="stat-block__label">Halved</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% elif stats.total_score is not none %}
   <div class="stat-bar">
     <div class="stat-block">
       <span class="stat-block__value">{{ stats.total_score }}</span>
@@ -71,6 +94,52 @@
     </div>
   </section>
 
+  {% if round.scoring_mode == 'match_play' %}
+  <!-- ── Match play scorecard ───────────────────────────── -->
+  <div class="match-opponent">
+    vs {{ round.opponent_name or 'Opponent' }}
+    {% if round.opponent_handicap is not none %} · HCI {{ round.opponent_handicap }}{% endif %}
+    {% if round.strokes_given is not none %} · Strokes: {{ round.strokes_given }}{% endif %}
+  </div>
+  <div class="entry-grid-wrapper">
+    <table class="entry-grid detail-grid match-grid">
+      <thead>
+        <tr>
+          <th class="col-hole">Hole</th>
+          <th class="col-par">Par</th>
+          <th class="col-hcp">HCP</th>
+          <th class="col-match-result">Result</th>
+          <th class="col-match-status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hole in round.holes %}
+        {% if hole.hole_number == 10 and round.holes_played == '18' %}
+        <tr class="turn-row"><td colspan="5">Turn</td></tr>
+        {% endif %}
+        {% set closed = match_result.closed_at and hole.hole_number > match_result.closed_at %}
+        <tr{% if closed %} class="match-row--closed"{% endif %}>
+          <td class="cell-fixed">{{ hole.hole_number }}</td>
+          <td class="cell-fixed">{{ hole.par }}</td>
+          <td class="cell-fixed">{{ hole.handicap }}</td>
+          <td class="cell-value cell-match-result">
+            {% if hole.hole_result == 'win' %}<span class="match-mark match-mark--win">W</span>
+            {% elif hole.hole_result == 'loss' %}<span class="match-mark match-mark--loss">L</span>
+            {% elif hole.hole_result == 'halve' %}<span class="match-mark match-mark--halve">½</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="cell-value cell-match-status">
+            {% if match_result.hole_status and hole.hole_number in match_result.hole_status %}
+            {{ match_result.hole_status[hole.hole_number] }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <!-- ── Stroke play scorecard ──────────────────────────── -->
   <div class="entry-grid-wrapper">
     <table class="entry-grid detail-grid">
       <thead>
@@ -150,6 +219,7 @@
       </tfoot>
     </table>
   </div>
+  {% endif %}
 
   {% if insights_enabled %}
   <section id="round-insights" class="landing-section landing-card insights-section">

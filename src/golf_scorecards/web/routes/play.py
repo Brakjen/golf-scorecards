@@ -25,6 +25,7 @@ from golf_scorecards.web.dependencies import (
     get_settings_repo,
     get_templates,
 )
+from golf_scorecards.rounds.match import compute_match_result
 from golf_scorecards.web.routes._helpers import (
     stableford_map,
     strokes_received_map,
@@ -38,11 +39,13 @@ templates = get_templates()
 async def round_create_form(
     request: Request,
     catalog_service: CatalogService = Depends(get_catalog_service),
+    settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse:
     """Render the round creation form (course and tee selection)."""
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
-    initial_tee = initial_course["tees"][0]
+    initial_tee = initial_course["tees"][0]["name"]
+    hci_raw = await settings_repo.get("handicap_index", request.state.user.id)
 
     return cast(
         HTMLResponse,
@@ -53,6 +56,7 @@ async def round_create_form(
                 "course_options": course_options,
                 "initial_course_slug": initial_course["course_slug"],
                 "initial_tee_name": initial_tee,
+                "handicap_index": hci_raw,
             },
         ),
     )
@@ -66,6 +70,11 @@ async def round_create(
     player_name: str = Form(default=""),
     round_date: str = Form(default=""),
     holes_played: str = Form(default="18"),
+    scoring_mode: str = Form(default="stroke"),
+    opponent_name: str = Form(default=""),
+    opponent_handicap: str = Form(default=""),
+    player_match_hci: str = Form(default=""),
+    hc_allowance: str = Form(default="100"),
     catalog_service: CatalogService = Depends(get_catalog_service),
     handicap_service: HandicapService = Depends(get_handicap_service),
     round_service: RoundService = Depends(get_round_service),
@@ -100,6 +109,44 @@ async def round_create(
     valid_holes = {"18", "front_9", "back_9"}
     hp = holes_played if holes_played in valid_holes else "18"
 
+    valid_modes = {"stroke", "stableford", "match_play"}
+    sm = scoring_mode if scoring_mode in valid_modes else "stroke"
+
+    # Match play fields
+    opp_name = opponent_name.strip() or None
+    opp_hc: float | None = None
+    sg: int | None = None
+    if sm == "match_play":
+        try:
+            opp_hc = float(opponent_handicap) if opponent_handicap.strip() else None
+        except ValueError:
+            opp_hc = None
+
+        # Compute strokes given from HCIs + course slope + allowance %
+        try:
+            player_hci = float(player_match_hci) if player_match_hci.strip() else hci
+        except ValueError:
+            player_hci = hci
+        try:
+            allowance_pct = int(hc_allowance) if hc_allowance.strip() else 100
+        except ValueError:
+            allowance_pct = 100
+
+        if player_hci is not None and opp_hc is not None and handicap_service.has_ratings(course_slug, tee_name):
+            try:
+                # Scale HCIs by allowance first, then compute course HC
+                p_adj = player_hci * allowance_pct / 100
+                o_adj = opp_hc * allowance_pct / 100
+                player_comp = handicap_service.compute_playing_handicap(
+                    course_slug, tee_name, "men", p_adj,
+                )
+                opp_comp = handicap_service.compute_playing_handicap(
+                    course_slug, tee_name, "men", o_adj,
+                )
+                sg = opp_comp.playing_handicap - player_comp.playing_handicap
+            except Exception:
+                sg = None
+
     r = await round_service.create_round(
         course=course,
         tee=tee,
@@ -111,8 +158,12 @@ async def round_create(
         playing_handicap=playing_hc,
         course_rating=cr,
         slope_rating=sr,
+        scoring_mode=sm,
         holes_played=hp,
         notes=None,
+        opponent_name=opp_name,
+        opponent_handicap=opp_hc,
+        strokes_given=sg,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/play", status_code=303)
 
@@ -264,7 +315,11 @@ def _tile_state(hole: RoundHole) -> str:
     explicitly set (not None).  The boolean toggles (sz_in_reg, up_and_down,
     down_in_3) default to unchecked which is a valid state, so they don't
     gate completion.
+
+    For match play, a hole is done when hole_result is set.
     """
+    if hole.hole_result is not None:
+        return "done"
     if hole.score is None:
         return "empty"
     if (
@@ -296,10 +351,32 @@ async def round_play_grid(
             "hole_number": h.hole_number,
             "par": h.par,
             "score": h.score,
+            "hole_result": h.hole_result,
             "state": _tile_state(h),
         }
         for h in r.holes
     ]
+
+    # Match play gets the all-in-one board instead of the tile grid.
+    if r.scoring_mode == "match_play":
+        played = {h.hole_number for h in r.holes}
+        all_holes = snapshot.get("holes", [])
+        stroke_map = strokes_received_map(all_holes, r.strokes_given, played)
+        match_result = compute_match_result(r.holes)
+        return cast(
+            HTMLResponse,
+            templates.TemplateResponse(
+                request=request,
+                name="round_play_match_board.html",
+                context={
+                    "round": r,
+                    "snapshot": snapshot,
+                    "holes": r.holes,
+                    "stroke_map": stroke_map,
+                    "match_result": match_result,
+                },
+            ),
+        )
 
     return cast(
         HTMLResponse,
@@ -353,6 +430,28 @@ async def round_play_hole(
         for d in range(-2, 5)
     ]
 
+    if r.scoring_mode == "match_play":
+        snapshot = json.loads(r.course_snapshot)
+        all_holes = snapshot.get("holes", [])
+        played = {h.hole_number for h in r.holes}
+        stroke_map = strokes_received_map(all_holes, r.strokes_given, played)
+        match_result = compute_match_result(r.holes)
+        return cast(
+            HTMLResponse,
+            templates.TemplateResponse(
+                request=request,
+                name="round_play_hole_match.html",
+                context={
+                    "round": r,
+                    "hole": hole,
+                    "prev_hole": prev_hole,
+                    "next_hole": next_hole,
+                    "stroke_dot": stroke_map.get(hole.hole_number, 0),
+                    "match_result": match_result,
+                },
+            ),
+        )
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -379,6 +478,40 @@ def _score_label(delta: int) -> str:
         3: "+3",
         4: "+4",
     }.get(delta, f"{delta:+d}")
+
+
+@router.post("/rounds/{round_id}/play/match")
+async def round_play_match_save(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Save all match play hole results from the board view."""
+    try:
+        r = await round_service.get_round(round_id, request.state.user.id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    form = await request.form()
+    valid_results = {"win", "loss", "halve"}
+    new_holes = []
+    for h in r.holes:
+        raw = str(form.get(f"result_{h.hole_number}", "") or "").strip()
+        result = raw if raw in valid_results else None
+        new_holes.append(
+            RoundHole(
+                id=h.id, round_id=h.round_id,
+                hole_number=h.hole_number, par=h.par,
+                distance=h.distance, handicap=h.handicap,
+                hole_result=result,
+            )
+        )
+    await round_service.save_holes(round_id, new_holes, request.state.user.id)
+    return RedirectResponse(
+        url=f"/rounds/{round_id}/play", status_code=303,
+    )
 
 
 @router.post("/rounds/{round_id}/play/{hole_number}")
@@ -419,8 +552,19 @@ async def round_play_hole_save(
         val = str(form.get(field, "") or "").strip()
         return val if val else None
 
-    # Build the full hole list, swapping in the updated hole.
-    updated_hole = RoundHole(
+    if r.scoring_mode == "match_play":
+        hole_result = _str("hole_result")
+        if hole_result not in ("win", "loss", "halve", None):
+            hole_result = None
+        updated_hole = RoundHole(
+            id=hole.id, round_id=hole.round_id,
+            hole_number=hole.hole_number, par=hole.par,
+            distance=hole.distance, handicap=hole.handicap,
+            hole_result=hole_result,
+        )
+    else:
+        # Build the full hole list, swapping in the updated hole.
+        updated_hole = RoundHole(
         id=hole.id,
         round_id=hole.round_id,
         hole_number=hole.hole_number,

@@ -123,6 +123,18 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
         conn.commit()
 
+    # Match play columns on rounds
+    if "opponent_name" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN opponent_name TEXT")
+        conn.execute("ALTER TABLE rounds ADD COLUMN opponent_handicap REAL")
+        conn.execute("ALTER TABLE rounds ADD COLUMN strokes_given INTEGER")
+        conn.commit()
+
+    # Match play hole result
+    if "hole_result" not in hole_cols:
+        conn.execute("ALTER TABLE round_holes ADD COLUMN hole_result TEXT")
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

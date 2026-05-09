@@ -49,14 +49,16 @@ class RoundRepository:
                     id, user_id, course_slug, tee_name, player_name, round_date,
                     handicap_index, handicap_profile, playing_handicap,
                     course_rating, slope_rating, scoring_mode, target_score,
+                    opponent_name, opponent_handicap, strokes_given,
                     holes_played, notes, course_snapshot, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r.id, user_id, r.course_slug, r.tee_name, r.player_name,
                     r.round_date.isoformat(), r.handicap_index,
                     r.handicap_profile, r.playing_handicap,
                     r.course_rating, r.slope_rating, r.scoring_mode,
-                    r.target_score, r.holes_played, r.notes, r.course_snapshot,
+                    r.target_score, r.opponent_name, r.opponent_handicap,
+                    r.strokes_given, r.holes_played, r.notes, r.course_snapshot,
                     r.created_at.isoformat(), r.updated_at.isoformat(),
                 ),
             )
@@ -140,6 +142,7 @@ class RoundRepository:
                     playing_handicap=row["playing_handicap"],
                     scoring_mode=row["scoring_mode"],
                     holes_played=row["holes_played"],
+                    opponent_name=row["opponent_name"],
                     notes=row["notes"],
                     total_score=row["total_score"],
                     total_putts=row["total_putts"],
@@ -177,14 +180,14 @@ class RoundRepository:
                         penalty_strokes = ?, miss_direction = ?,
                         up_and_down = ?, sand_save = ?, sz_in_reg = ?,
                         down_in_3 = ?,
-                        nfs = ?, notes = ?
+                        nfs = ?, hole_result = ?, notes = ?
                     WHERE round_id = ? AND hole_number = ?""",
                     (
                         h.score, h.putts,
                         h.penalty_strokes, h.miss_direction,
                         h.up_and_down, h.sand_save, h.sz_in_reg,
                         h.down_in_3,
-                        h.nfs, h.notes, round_id, h.hole_number,
+                        h.nfs, h.hole_result, h.notes, round_id, h.hole_number,
                     ),
                 )
             now = datetime.now().isoformat()
@@ -301,8 +304,7 @@ class RoundRepository:
                        MIN(rh.score) AS best_score
                 FROM round_holes rh
                 JOIN rounds r ON r.id = rh.round_id
-                WHERE r.user_id = ?
-                  AND rh.score IS NOT NULL
+                WHERE r.user_id = ?                  AND r.scoring_mode != 'match_play'                  AND rh.score IS NOT NULL
                   AND rh.score {op} rh.par
             """
             params: list[object] = [user_id]
@@ -354,9 +356,11 @@ class RoundRepository:
                    FROM round_holes rh
                    JOIN rounds r ON r.id = rh.round_id
                    WHERE r.user_id = ?
+                     AND r.scoring_mode != 'match_play'
                      AND r.id IN (
                        SELECT id FROM rounds r2
                        WHERE r2.user_id = ? AND r2.course_slug = r.course_slug
+                         AND r2.scoring_mode != 'match_play'
                        ORDER BY r2.round_date DESC LIMIT 1
                      )
                    ORDER BY r.course_slug, rh.hole_number""",
@@ -411,6 +415,7 @@ class RoundRepository:
                 sz_in_reg=row["sz_in_reg"],
                 down_in_3=row["down_in_3"],
                 nfs=row["nfs"],
+                hole_result=row["hole_result"],
                 notes=row["notes"],
             )
             for row in rows
@@ -440,6 +445,9 @@ class RoundRepository:
             slope_rating=row["slope_rating"],
             scoring_mode=row["scoring_mode"],
             target_score=row["target_score"],
+            opponent_name=row["opponent_name"],
+            opponent_handicap=row["opponent_handicap"],
+            strokes_given=row["strokes_given"],
             holes_played=row["holes_played"],
             notes=row["notes"],
             course_snapshot=row["course_snapshot"],

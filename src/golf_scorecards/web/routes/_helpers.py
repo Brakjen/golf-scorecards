@@ -97,7 +97,7 @@ async def build_home_context(
     """
     course_options = catalog_service.list_course_options()
     initial_course = course_options[0]
-    initial_tee = initial_course["tees"][0]
+    initial_tee = initial_course["tees"][0]["name"]
 
     summaries = await round_service.list_rounds(user_id)
     recent = summaries[:3]

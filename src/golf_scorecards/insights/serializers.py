@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from golf_scorecards.rounds.match import compute_match_result
 from golf_scorecards.rounds.models import Round
 from golf_scorecards.rounds.stats import QuickStats
 
@@ -48,6 +49,37 @@ def serialize_rounds(
         if r.playing_handicap is not None:
             header += f" | PH {r.playing_handicap}"
         lines.append(header)
+
+        # ── Match play round ─────────────────────────────
+        if r.scoring_mode == "match_play":
+            mr = compute_match_result(r.holes)
+            lines.append(f"  Format: Match Play vs {r.opponent_name or 'Opponent'}")
+            if r.opponent_handicap is not None:
+                lines.append(f"  Opponent HCI: {r.opponent_handicap}")
+            if r.strokes_given is not None:
+                lines.append(f"  Strokes given: {r.strokes_given}")
+            lines.append(f"  Result: {mr.result_text}")
+            lines.append(
+                f"  Won: {mr.holes_won} | Lost: {mr.holes_lost}"
+                f" | Halved: {mr.holes_halved}"
+            )
+            if mr.hole_status:
+                lines.append("  Holes:")
+                for h in r.holes:
+                    if h.hole_result is None:
+                        continue
+                    if mr.closed_at and h.hole_number > mr.closed_at:
+                        break
+                    label = {"win": "W", "loss": "L", "halve": "½"}.get(
+                        h.hole_result, "—",
+                    )
+                    status = mr.hole_status.get(h.hole_number, "")
+                    lines.append(
+                        f"    H{h.hole_number} | P{h.par}"
+                        f" | {label} | {status}"
+                    )
+            lines.append("")
+            continue
 
         scored = [h for h in r.holes if h.score is not None]
         if not scored:

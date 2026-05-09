@@ -19,6 +19,13 @@
     </div>
   </header>
 
+  {% if round.scoring_mode == 'match_play' and match_result %}
+  <div class="match-grid-status">
+    <span>vs {{ round.opponent_name or 'Opponent' }}</span>
+    <span class="match-grid-status__score">{{ match_result.result_text }}</span>
+  </div>
+  {% endif %}
+
   <section class="play-grid" aria-label="Hole tiles">
     {% for tile in tiles %}
     <a href="/rounds/{{ round.id }}/play/{{ tile.hole_number }}"
@@ -27,7 +34,11 @@
       <span class="play-tile__hole">{{ tile.hole_number }}</span>
       <span class="play-tile__par">Par {{ tile.par }}</span>
       <span class="play-tile__score">
-        {% if tile.score is not none %}{{ tile.score }}{% else %}—{% endif %}
+        {% if round.scoring_mode == 'match_play' %}
+          {% if tile.hole_result == 'win' %}W{% elif tile.hole_result == 'loss' %}L{% elif tile.hole_result == 'halve' %}½{% else %}—{% endif %}
+        {% else %}
+          {% if tile.score is not none %}{{ tile.score }}{% else %}—{% endif %}
+        {% endif %}
       </span>
     </a>
     {% endfor %}

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from golf_scorecards.insights.service import InsightsService
+from golf_scorecards.rounds.match import compute_match_result
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.web.dependencies import (
     get_insights_service,
@@ -39,12 +40,17 @@ async def round_list(
     summaries = await round_service.list_rounds(user_id)
 
     round_stableford: dict[str, int] = {}
+    match_results: dict[str, str] = {}
     for s in summaries:
         try:
             r = await round_service.get_round(s.id, user_id)
-            pts = total_stableford(r)
-            if pts is not None:
-                round_stableford[r.id] = pts
+            if s.scoring_mode == "match_play":
+                mr = compute_match_result(r.holes)
+                match_results[s.id] = mr.result_text
+            else:
+                pts = total_stableford(r)
+                if pts is not None:
+                    round_stableford[r.id] = pts
         except RoundNotFoundError:
             continue
 
@@ -53,7 +59,11 @@ async def round_list(
         templates.TemplateResponse(
             request=request,
             name="round_list.html",
-            context={"rounds": summaries, "round_stableford": round_stableford},
+            context={
+                "rounds": summaries,
+                "round_stableford": round_stableford,
+                "match_results": match_results,
+            },
         ),
     )
 
@@ -104,6 +114,11 @@ async def round_detail(
             cache_key=f"round:{round_id}",
         )
 
+    match_result = (
+        compute_match_result(r.holes)
+        if r.scoring_mode == "match_play" else None
+    )
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -117,6 +132,7 @@ async def round_detail(
                 "stableford": stableford,
                 "round_insights": cached_insights,
                 "insights_enabled": insights_service is not None,
+                "match_result": match_result,
             },
         ),
     )

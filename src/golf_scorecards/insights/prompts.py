@@ -35,7 +35,19 @@ values that must NOT be counted as failures.
 
 {METRICS_DEFINITIONS}
 
-## Aspects to consider (pick the most relevant)
+## Match play rounds
+
+Rounds marked "Format: Match Play" only record win/loss/halve per hole — there \
+are NO stroke scores, putts, penalties, NFS, miss directions, or short-game \
+metrics. Do NOT mention or speculate about any of those metrics for match play \
+rounds. Instead, focus on:
+- The overall result and margin
+- Momentum patterns (winning/losing streaks, comebacks)
+- Performance on the front 9 vs back 9
+- Closing ability (performance on the final holes before the match ended)
+- Handicap difference and strokes given/received
+
+## Aspects to consider for stroke play (pick the most relevant)
 
 - Scoring patterns (birdies, bogeys, double+, par saves)
 - Putting efficiency (putts per round, 3-putts, up-and-down conversion)
@@ -48,6 +60,7 @@ values that must NOT be counted as failures.
 ## Rules
 
 - Be specific — reference actual numbers from the data.
+- Only reference metrics that are actually present in the data.
 - Tailor advice to the golfer's handicap level.
 - Be encouraging but honest.
 - Prioritise the biggest areas for improvement.
@@ -95,10 +108,18 @@ values that must NOT be counted as failures.
 
 {METRICS_DEFINITIONS}
 
+## Match play rounds
+
+Rounds marked "Format: Match Play" only record win/loss/halve per hole — there \
+are NO stroke scores, putts, penalties, NFS, miss directions, or short-game \
+metrics. Do NOT mention or speculate about any of those metrics for match play \
+rounds. Focus only on the data that is actually present.
+
 ## Rules
 
 - Answer the user's question directly and concisely.
 - Cite specific numbers from the round data when relevant.
+- Only reference metrics that are actually present in the data.
 - Tailor advice to the golfer's handicap level.
 - Be honest about limitations (e.g. small sample size, missing data).
 - If the question is ambiguous, ask for clarification rather than guessing.

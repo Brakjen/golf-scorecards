@@ -44,6 +44,9 @@ class RoundService:
         target_score: int | None = None,
         holes_played: str = "18",
         notes: str | None = None,
+        opponent_name: str | None = None,
+        opponent_handicap: float | None = None,
+        strokes_given: int | None = None,
     ) -> Round:
         """Create a new round with empty hole rows from the course snapshot.
 
@@ -123,6 +126,9 @@ class RoundService:
             slope_rating=slope_rating,
             scoring_mode=scoring_mode,
             target_score=target_score,
+            opponent_name=opponent_name,
+            opponent_handicap=opponent_handicap,
+            strokes_given=strokes_given,
             holes_played=holes_played,
             notes=notes,
             course_snapshot=snapshot,

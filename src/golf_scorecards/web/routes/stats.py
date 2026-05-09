@@ -36,6 +36,8 @@ async def stats_page(
     if summaries:
         stats_rounds = []
         for s in summaries[:20]:
+            if s.scoring_mode == "match_play":
+                continue
             try:
                 stats_rounds.append(await round_service.get_round(s.id, request.state.user.id))
             except RoundNotFoundError:

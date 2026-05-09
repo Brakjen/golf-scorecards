@@ -48,6 +48,36 @@
         </div>
       </div>
 
+      <div class="field-group">
+        <span>Format</span>
+        <div id="format-segmented" class="segmented-control">
+          <input type="radio" name="scoring_mode" id="sm-stroke" value="stroke" checked>
+          <label for="sm-stroke">Stroke</label>
+          <input type="radio" name="scoring_mode" id="sm-match" value="match_play">
+          <label for="sm-match">Match Play</label>
+        </div>
+      </div>
+
+      <div id="match-play-fields" style="display:none">
+        <label>
+          <span>Opponent name</span>
+          <input type="text" name="opponent_name" value="" placeholder="Opponent name">
+        </label>
+        <label>
+          <span>Opponent HCI</span>
+          <input type="number" id="opp-hci" name="opponent_handicap" value="" placeholder="e.g. 18.4" step="0.1">
+        </label>
+        <label>
+          <span>Your HCI</span>
+          <input type="number" id="player-hci" name="player_match_hci" value="{{ handicap_index if handicap_index else '' }}" placeholder="e.g. 12.3" step="0.1">
+        </label>
+        <label>
+          <span>HC Allowance %</span>
+          <input type="number" id="hc-allowance" name="hc_allowance" value="100" min="0" max="100" step="1">
+        </label>
+        <p id="strokes-preview" class="match-strokes-preview" style="display:none"></p>
+      </div>
+
       <button type="submit" id="submit-btn" disabled>Start entering scores</button>
     </form>
   </section>
@@ -72,15 +102,15 @@
 
     if (!selectedCourse) return;
 
-    selectedCourse.tees.forEach((teeName) => {
+    selectedCourse.tees.forEach((tee) => {
       const input = document.createElement("input");
       input.type = "radio";
       input.name = "tee_radio";
-      input.id = `tee-${teeName}`;
-      input.value = teeName;
+      input.id = `tee-${tee.name}`;
+      input.value = tee.name;
       const label = document.createElement("label");
-      label.htmlFor = `tee-${teeName}`;
-      label.textContent = teeName;
+      label.htmlFor = `tee-${tee.name}`;
+      label.textContent = tee.name;
       teeSegmented.appendChild(input);
       teeSegmented.appendChild(label);
     });
@@ -101,12 +131,76 @@
       teeHidden.value = input.value;
       submitBtn.disabled = false;
     }
+    updateStrokesPreview();
   });
 
   courseSelect.addEventListener("change", (e) => {
     updateTeeOptions(e.target.value);
+    updateStrokesPreview();
   });
 
   updateTeeOptions(courseSelect.value);
+
+  // Match play toggle
+  const matchFields = document.getElementById("match-play-fields");
+  document.getElementById("format-segmented").addEventListener("change", (e) => {
+    const isMatch = e.target.value === "match_play";
+    matchFields.style.display = isMatch ? "" : "none";
+    submitBtn.textContent = isMatch ? "Start match" : "Start entering scores";
+  });
+
+  // Strokes preview calculation
+  const oppHci = document.getElementById("opp-hci");
+  const playerHci = document.getElementById("player-hci");
+  const strokesPreview = document.getElementById("strokes-preview");
+
+  function getSelectedTeeData() {
+    const teeName = teeHidden.value;
+    if (!teeName) return null;
+    const course = courseOptions.find((c) => c.course_slug === courseSelect.value);
+    if (!course) return null;
+    return course.tees.find((t) => t.name === teeName) || null;
+  }
+
+  function getAllowance() {
+    const val = parseInt(document.getElementById("hc-allowance").value);
+    return isNaN(val) ? 100 : val;
+  }
+
+  function computeCourseHC(hci, tee) {
+    if (!tee || !tee.slope || !tee.cr) return null;
+    return Math.round(hci * (tee.slope / 113) + (tee.cr - tee.par));
+  }
+
+  function updateStrokesPreview() {
+    const pVal = parseFloat(playerHci.value);
+    const oVal = parseFloat(oppHci.value);
+    const tee = getSelectedTeeData();
+    if (isNaN(pVal) || isNaN(oVal) || !tee) {
+      strokesPreview.style.display = "none";
+      return;
+    }
+    const allowance = getAllowance();
+    const pAdj = pVal * allowance / 100;
+    const oAdj = oVal * allowance / 100;
+    const pCH = computeCourseHC(pAdj, tee);
+    const oCH = computeCourseHC(oAdj, tee);
+    if (pCH === null || oCH === null) {
+      strokesPreview.style.display = "none";
+      return;
+    }
+    const strokes = oCH - pCH;
+    const desc = strokes > 0
+      ? `You give ${strokes} stroke${strokes !== 1 ? "s" : ""}`
+      : strokes < 0
+        ? `You receive ${Math.abs(strokes)} stroke${Math.abs(strokes) !== 1 ? "s" : ""}`
+        : "No strokes given";
+    strokesPreview.textContent = `${desc} (Course HC: you ${pCH}, opp ${oCH})`;
+    strokesPreview.style.display = "";
+  }
+
+  oppHci.addEventListener("input", updateStrokesPreview);
+  playerHci.addEventListener("input", updateStrokesPreview);
+  document.getElementById("hc-allowance").addEventListener("input", updateStrokesPreview);
 </script>
 {% endblock %}

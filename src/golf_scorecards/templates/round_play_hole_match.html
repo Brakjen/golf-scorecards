@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Hole {{ hole.hole_number }} — Match Play{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide hole-page">
+  <header class="hole-header">
+    <a href="/rounds/{{ round.id }}/play" class="hole-header__back" aria-label="Back to grid">←</a>
+    <div class="hole-header__title">
+      <span class="hole-header__num">Hole {{ hole.hole_number }}</span>
+      <span class="hole-header__meta">
+        Par {{ hole.par }}{% if hole.distance %} · {{ hole.distance }}m{% endif %} · HCP {{ hole.handicap }}
+        {% if stroke_dot %} · <span class="match-stroke-dot" title="Stroke{% if stroke_dot > 1 %}s{% endif %} received">{{ '●' * stroke_dot }}</span>{% endif %}
+      </span>
+    </div>
+    <div class="hole-header__nav">
+      {% if prev_hole %}<a href="/rounds/{{ round.id }}/play/{{ prev_hole }}" class="hole-header__navlink" aria-label="Previous hole">‹</a>{% else %}<span class="hole-header__navlink is-disabled">‹</span>{% endif %}
+      {% if next_hole %}<a href="/rounds/{{ round.id }}/play/{{ next_hole }}" class="hole-header__navlink" aria-label="Next hole">›</a>{% else %}<span class="hole-header__navlink is-disabled">›</span>{% endif %}
+    </div>
+  </header>
+
+  <div class="match-status">
+    <span class="match-status__vs">vs {{ round.opponent_name or 'Opponent' }}</span>
+    <span class="match-status__score">{{ match_result.result_text }}</span>
+  </div>
+
+  <form method="post" action="/rounds/{{ round.id }}/play/{{ hole.hole_number }}" class="match-form">
+    <div class="match-result-buttons">
+      <label class="match-btn match-btn--win">
+        <input type="radio" name="hole_result" value="win"
+               {% if hole.hole_result == 'win' %}checked{% endif %}>
+        <span>W</span>
+      </label>
+      <label class="match-btn match-btn--halve">
+        <input type="radio" name="hole_result" value="halve"
+               {% if hole.hole_result == 'halve' %}checked{% endif %}>
+        <span>½</span>
+      </label>
+      <label class="match-btn match-btn--loss">
+        <input type="radio" name="hole_result" value="loss"
+               {% if hole.hole_result == 'loss' %}checked{% endif %}>
+        <span>L</span>
+      </label>
+    </div>
+
+    <div class="match-form-actions">
+      {% if next_hole %}
+      <button type="submit" name="action" value="next" class="btn-primary">Save &amp; Next →</button>
+      {% endif %}
+      <button type="submit" name="action" value="grid" class="btn-secondary">Save &amp; Grid</button>
+    </div>
+  </form>
+</main>
+{% endblock %}
