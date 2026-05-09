@@ -112,6 +112,7 @@ async def round_create(
         course_rating=cr,
         slope_rating=sr,
         holes_played=hp,
+        notes=None,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/play", status_code=303)
 
@@ -226,6 +227,24 @@ async def round_save(
             user_id=request.state.user.id,
         )
 
+    return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
+
+
+@router.post("/rounds/{round_id}/notes")
+async def round_update_notes(
+    request: Request,
+    round_id: str,
+    notes: str = Form(default=""),
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Update the round-level notes field."""
+    try:
+        cleaned = notes.strip() or None
+        await round_service.update_notes(round_id, cleaned, request.state.user.id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
     return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
 
 

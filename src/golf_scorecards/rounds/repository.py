@@ -49,14 +49,14 @@ class RoundRepository:
                     id, user_id, course_slug, tee_name, player_name, round_date,
                     handicap_index, handicap_profile, playing_handicap,
                     course_rating, slope_rating, scoring_mode, target_score,
-                    holes_played, course_snapshot, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    holes_played, notes, course_snapshot, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r.id, user_id, r.course_slug, r.tee_name, r.player_name,
                     r.round_date.isoformat(), r.handicap_index,
                     r.handicap_profile, r.playing_handicap,
                     r.course_rating, r.slope_rating, r.scoring_mode,
-                    r.target_score, r.holes_played, r.course_snapshot,
+                    r.target_score, r.holes_played, r.notes, r.course_snapshot,
                     r.created_at.isoformat(), r.updated_at.isoformat(),
                 ),
             )
@@ -140,6 +140,7 @@ class RoundRepository:
                     playing_handicap=row["playing_handicap"],
                     scoring_mode=row["scoring_mode"],
                     holes_played=row["holes_played"],
+                    notes=row["notes"],
                     total_score=row["total_score"],
                     total_putts=row["total_putts"],
                     ud_count=row["ud_count"],
@@ -196,6 +197,29 @@ class RoundRepository:
 
     # ── Delete ───────────────────────────────────────────
 
+    async def update_notes(self, round_id: str, notes: str | None, user_id: str) -> bool:
+        """Update round-level notes.
+
+        Args:
+            round_id: The unique round identifier.
+            notes: Free-text notes for the round, or ``None`` to clear.
+            user_id: The ID of the user who owns this round.
+
+        Returns:
+            ``True`` if the round was found and updated.
+        """
+        conn = await self._conn()
+        try:
+            now = datetime.now().isoformat()
+            cursor = await conn.execute(
+                "UPDATE rounds SET notes = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                (notes, now, round_id, user_id),
+            )
+            await conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            await conn.close()
+
     async def update_handicap(
         self,
         round_id: str,
@@ -250,6 +274,104 @@ class RoundRepository:
             )
             await conn.commit()
             return cursor.rowcount > 0
+        finally:
+            await conn.close()
+
+    # ── Birdie map ────────────────────────────────────────
+
+    async def get_birdie_map(
+        self, user_id: str, year: int | None = None, *, include_par: bool = False,
+    ) -> list[dict]:
+        """Return holes scored under par (or at par) per course.
+
+        Args:
+            user_id: The ID of the user.
+            year: Optional year filter. ``None`` means all time.
+            include_par: If ``True``, include scores equal to par as well.
+
+        Returns:
+            A list of dicts with keys ``course_slug``, ``hole_number``,
+            ``par``, ``best_score``.
+        """
+        conn = await self._conn()
+        try:
+            op = "<=" if include_par else "<"
+            sql = f"""
+                SELECT r.course_slug, rh.hole_number, rh.par,
+                       MIN(rh.score) AS best_score
+                FROM round_holes rh
+                JOIN rounds r ON r.id = rh.round_id
+                WHERE r.user_id = ?
+                  AND rh.score IS NOT NULL
+                  AND rh.score {op} rh.par
+            """
+            params: list[object] = [user_id]
+            if year is not None:
+                sql += " AND CAST(SUBSTR(r.round_date, 1, 4) AS INTEGER) = ?"
+                params.append(year)
+            sql += " GROUP BY r.course_slug, rh.hole_number"
+            cursor = await conn.execute(sql, params)
+            rows = await cursor.fetchall()
+            return [
+                {
+                    "course_slug": row["course_slug"],
+                    "hole_number": row["hole_number"],
+                    "par": row["par"],
+                    "best_score": row["best_score"],
+                }
+                for row in rows
+            ]
+        finally:
+            await conn.close()
+
+    async def get_round_years(self, user_id: str) -> list[int]:
+        """Return distinct years that have rounds, descending."""
+        conn = await self._conn()
+        try:
+            cursor = await conn.execute(
+                """SELECT DISTINCT CAST(SUBSTR(round_date, 1, 4) AS INTEGER) AS yr
+                   FROM rounds WHERE user_id = ? ORDER BY yr DESC""",
+                (user_id,),
+            )
+            return [row["yr"] for row in await cursor.fetchall()]
+        finally:
+            await conn.close()
+
+    async def get_course_hole_pars(
+        self, user_id: str,
+    ) -> dict[str, list[dict]]:
+        """Return hole par/number for each course the user has played.
+
+        Uses the most recent round's hole data per course.
+
+        Returns:
+            Mapping of course_slug → list of {hole_number, par} dicts.
+        """
+        conn = await self._conn()
+        try:
+            cursor = await conn.execute(
+                """SELECT r.course_slug, rh.hole_number, rh.par
+                   FROM round_holes rh
+                   JOIN rounds r ON r.id = rh.round_id
+                   WHERE r.user_id = ?
+                     AND r.id IN (
+                       SELECT id FROM rounds r2
+                       WHERE r2.user_id = ? AND r2.course_slug = r.course_slug
+                       ORDER BY r2.round_date DESC LIMIT 1
+                     )
+                   ORDER BY r.course_slug, rh.hole_number""",
+                (user_id, user_id),
+            )
+            rows = await cursor.fetchall()
+            result: dict[str, list[dict]] = {}
+            for row in rows:
+                slug = row["course_slug"]
+                if slug not in result:
+                    result[slug] = []
+                result[slug].append(
+                    {"hole_number": row["hole_number"], "par": row["par"]}
+                )
+            return result
         finally:
             await conn.close()
 
@@ -319,6 +441,7 @@ class RoundRepository:
             scoring_mode=row["scoring_mode"],
             target_score=row["target_score"],
             holes_played=row["holes_played"],
+            notes=row["notes"],
             course_snapshot=row["course_snapshot"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),

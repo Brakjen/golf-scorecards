@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS rounds (
     scoring_mode    TEXT NOT NULL DEFAULT 'stroke',
     target_score    INTEGER,
     holes_played    TEXT NOT NULL DEFAULT '18' CHECK(holes_played IN ('18', 'front_9', 'back_9')),
+    notes           TEXT,
     course_snapshot TEXT NOT NULL,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL

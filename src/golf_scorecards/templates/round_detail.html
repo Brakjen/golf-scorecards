@@ -53,6 +53,24 @@
   </div>
   {% endif %}
 
+  <section class="round-notes-section">
+    <div class="round-notes-display" id="notes-display" {% if not round.notes %}style="display:none"{% endif %}>
+      <p class="round-notes-text" id="notes-text">{{ round.notes or '' }}</p>
+      <button type="button" class="btn-link" onclick="toggleNotesEdit(true)">Edit notes</button>
+    </div>
+    <div class="round-notes-edit" id="notes-edit" {% if round.notes %}style="display:none"{% endif %}>
+      <form method="post" action="/rounds/{{ round.id }}/notes">
+        <textarea name="notes" rows="3" placeholder="Add round notes — e.g. weather, playing partners, tournament…">{{ round.notes or '' }}</textarea>
+        <div class="round-notes-actions">
+          <button type="submit" class="btn-primary btn-sm">Save</button>
+          {% if round.notes %}
+          <button type="button" class="btn-secondary btn-sm" onclick="toggleNotesEdit(false)">Cancel</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </section>
+
   <div class="entry-grid-wrapper">
     <table class="entry-grid detail-grid">
       <thead>
@@ -87,8 +105,11 @@
           <td class="cell-fixed">{{ hole.distance }}</td>
           <td class="cell-fixed">{{ hole.handicap }}</td>
           <td class="cell-fixed">{{ strokes_map.get(hole.hole_number, '') }}</td>
-          <td class="cell-value{% if hole.score is not none and hole.score < hole.par %} cell-birdie{% elif hole.score is not none and hole.score > hole.par %} cell-bogey{% endif %}">
-            {{ hole.score if hole.score is not none else '—' }}
+          <td class="cell-value cell-score">
+            {% if hole.score is not none %}
+            {% set diff = hole.score - hole.par %}
+            <span class="score-mark{% if diff <= -2 %} mark-eagle{% elif diff == -1 %} mark-birdie{% elif diff == 1 %} mark-bogey{% elif diff == 2 %} mark-double{% elif diff >= 3 %} mark-triple{% endif %}">{{ hole.score }}</span>
+            {% else %}—{% endif %}
           </td>
           <td class="cell-value">{{ stableford.get(hole.hole_number, '—') if stableford.get(hole.hole_number) is not none else '—' }}</td>
           <td class="cell-value">
@@ -131,7 +152,7 @@
   </div>
 
   {% if insights_enabled %}
-  <section class="landing-section landing-card insights-section">
+  <section id="round-insights" class="landing-section landing-card insights-section">
     <div class="section-header">
       <h2 class="section-title">Round Insights</h2>
       {% if round_insights %}
@@ -162,4 +183,11 @@
     <a href="/rounds">← All rounds</a>
   </div>
 </main>
+
+<script>
+function toggleNotesEdit(show) {
+  document.getElementById('notes-display').style.display = show ? 'none' : '';
+  document.getElementById('notes-edit').style.display = show ? '' : 'none';
+}
+</script>
 {% endblock %}

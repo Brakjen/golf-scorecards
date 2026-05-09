@@ -55,6 +55,9 @@
           <button type="submit" class="btn-action btn-action--delete">Delete</button>
         </form>
       </div>
+      {% if r.notes %}
+      <div class="round-card__notes">{{ r.notes }}</div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>

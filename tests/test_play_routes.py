@@ -169,3 +169,42 @@ def test_play_hole_unknown_hole_returns_404(client: TestClient) -> None:
 def test_play_grid_unknown_round_returns_404(client: TestClient) -> None:
     resp = client.get("/rounds/nonexistent/play")
     assert resp.status_code == 404
+
+
+def test_round_notes_save_and_display(client: TestClient) -> None:
+    rid = _create_round(client)
+
+    # Initially no notes
+    resp = client.get(f"/rounds/{rid}")
+    assert resp.status_code == 200
+    assert "Fun scramble" not in resp.text
+
+    # Save notes
+    resp = client.post(
+        f"/rounds/{rid}/notes",
+        data={"notes": "Fun scramble with my brother"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    # Notes visible on detail page
+    resp = client.get(f"/rounds/{rid}")
+    assert "Fun scramble with my brother" in resp.text
+
+    # Clear notes
+    resp = client.post(
+        f"/rounds/{rid}/notes",
+        data={"notes": "  "},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    resp = client.get(f"/rounds/{rid}")
+    assert "Fun scramble" not in resp.text
+
+
+def test_round_notes_404_for_unknown_round(client: TestClient) -> None:
+    resp = client.post(
+        "/rounds/nonexistent/notes",
+        data={"notes": "test"},
+    )
+    assert resp.status_code == 404

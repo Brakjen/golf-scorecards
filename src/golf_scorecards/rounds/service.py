@@ -43,6 +43,7 @@ class RoundService:
         scoring_mode: str = "stroke",
         target_score: int | None = None,
         holes_played: str = "18",
+        notes: str | None = None,
     ) -> Round:
         """Create a new round with empty hole rows from the course snapshot.
 
@@ -123,6 +124,7 @@ class RoundService:
             scoring_mode=scoring_mode,
             target_score=target_score,
             holes_played=holes_played,
+            notes=notes,
             course_snapshot=snapshot,
             created_at=now,
             updated_at=now,
@@ -186,6 +188,22 @@ class RoundService:
         assert updated is not None
         return updated
 
+    async def update_notes(self, round_id: str, notes: str | None, user_id: str) -> None:
+        """Update round-level notes.
+
+        Args:
+            round_id: The unique round identifier.
+            notes: Free-text notes for the round, or ``None`` to clear.
+            user_id: The ID of the user who owns this round.
+
+        Raises:
+            RoundNotFoundError: If no round with the given ID exists for this user.
+        """
+        existing = await self._repo.get_round(round_id, user_id)
+        if existing is None:
+            raise RoundNotFoundError(f"Round not found: {round_id}")
+        await self._repo.update_notes(round_id, notes, user_id)
+
     async def update_handicap(
         self,
         round_id: str,
@@ -235,3 +253,59 @@ class RoundService:
         deleted = await self._repo.delete_round(round_id, user_id)
         if not deleted:
             raise RoundNotFoundError(f"Round not found: {round_id}")
+
+    async def get_birdie_map(
+        self, user_id: str, year: int | None = None, mode: str = "birdie",
+    ) -> dict:
+        """Build birdie/par map data for all courses the user has played.
+
+        Args:
+            user_id: The user ID.
+            year: Optional year filter.
+            mode: ``"birdie"`` for under-par only, ``"par"`` for par-or-better.
+
+        Returns a dict with keys:
+            courses: list of {slug, holes: [{hole_number, par, birdied, best_score}]}
+            years: list of available years (descending)
+            selected_year: the year filter applied (or None for all-time)
+            mode: the active mode
+        """
+        include_par = mode == "par"
+        course_holes = await self._repo.get_course_hole_pars(user_id)
+        birdied_rows = await self._repo.get_birdie_map(
+            user_id, year, include_par=include_par,
+        )
+        years = await self._repo.get_round_years(user_id)
+
+        # Index birdied holes: (course_slug, hole_number) -> best_score
+        birdied_index: dict[tuple[str, int], int] = {}
+        for row in birdied_rows:
+            birdied_index[(row["course_slug"], row["hole_number"])] = row["best_score"]
+
+        courses = []
+        for slug, holes in sorted(course_holes.items()):
+            course_data = {
+                "slug": slug,
+                "display_name": slug.replace("-", " ").title(),
+                "holes": [],
+                "birdied_count": 0,
+            }
+            for h in holes:
+                key = (slug, h["hole_number"])
+                best = birdied_index.get(key)
+                course_data["holes"].append({
+                    "hole_number": h["hole_number"],
+                    "par": h["par"],
+                    "birdied": key in birdied_index,
+                    "best_score": best,
+                })
+                if key in birdied_index:
+                    course_data["birdied_count"] += 1
+            courses.append(course_data)
+
+        return {
+            "courses": courses,
+            "years": years,
+            "selected_year": year,
+            "mode": mode,
+        }

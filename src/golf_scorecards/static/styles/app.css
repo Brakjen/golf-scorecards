@@ -735,6 +735,20 @@ tfoot th {
   gap: 8px;
 }
 
+.round-card__notes {
+  flex-basis: 100%;
+  order: 99;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .round-card__link {
   color: inherit;
   text-decoration: none;
@@ -905,18 +919,104 @@ tfoot th {
   margin-top: 2px;
 }
 
+/* Round-level notes */
+.round-notes-section {
+  margin-bottom: 20px;
+}
+
+.round-notes-text {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.round-notes-edit textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.round-notes-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
 .detail-grid .cell-value {
   text-align: center;
   font-size: 0.88rem;
 }
 
-.cell-birdie {
-  color: var(--accent);
-  font-weight: 700;
+/* Golf scorecard score markers */
+.cell-score {
+  padding: 0 !important;
 }
 
-.cell-bogey {
+.score-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.mark-birdie {
+  color: var(--accent);
+  border: 0.75px solid var(--accent);
+  border-radius: 50%;
+}
+
+.mark-eagle {
+  color: var(--accent);
+  border: 0.75px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 2.75px var(--accent);
+}
+
+.mark-bogey {
   color: #e0a555;
+  border: 0.75px solid #e0a555;
+  border-radius: 2px;
+}
+
+.mark-double {
+  color: #e0a555;
+  border: 0.75px solid #e0a555;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 2.75px #e0a555;
+}
+
+.mark-triple {
+  color: #e05555;
+  border: 0.75px solid #e05555;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 2.75px #e05555, 0 0 0 4.75px var(--panel), 0 0 0 5.5px #e05555;
 }
 
 .cell-notes-text {
@@ -1349,6 +1449,135 @@ tfoot th {
   font-size: 0.9rem;
   text-align: center;
   padding: 1rem 0;
+}
+
+/* ── Birdie map ──────────────────────────────────────── */
+
+.birdie-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.birdie-year-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 16px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.birdie-year-btn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  background: transparent;
+  border-right: 1px solid var(--rule);
+  transition: background 0.15s, color 0.15s;
+}
+
+.birdie-year-btn:last-child {
+  border-right: none;
+}
+
+.birdie-year-btn:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.birdie-year-btn--active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.birdie-year-btn--active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.birdie-divider {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 16px 0;
+}
+
+.birdie-course {
+  margin-top: 12px;
+}
+
+.birdie-course__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.birdie-course__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.birdie-course__count {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.birdie-holes,
+.birdie-nine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.birdie-hole {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 42px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: default;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.birdie-hole--yes {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.birdie-hole__num {
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.birdie-hole--yes .birdie-hole__num {
+  color: var(--accent);
+}
+
+.birdie-hole__par {
+  font-size: 0.65rem;
+  color: var(--muted);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.birdie-complete {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ── Ask the coach (Q&A) ─────────────────────────────── */

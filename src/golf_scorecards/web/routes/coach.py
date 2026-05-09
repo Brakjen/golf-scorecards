@@ -105,7 +105,7 @@ async def insights_refresh(
         handicap_index=await settings_repo.get("handicap_index", user_id),
         force=True,
     )
-    return RedirectResponse(url="/coach", status_code=303)
+    return RedirectResponse(url="/coach#insights", status_code=303)
 
 
 @router.post("/rounds/{round_id}/insights/refresh")
@@ -137,7 +137,7 @@ async def round_insights_refresh(
         force=True,
         cache_key=f"round:{round_id}",
     )
-    return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
+    return RedirectResponse(url=f"/rounds/{round_id}#round-insights", status_code=303)
 
 
 @router.post("/ask", response_class=HTMLResponse, response_model=None)
@@ -160,7 +160,7 @@ async def ask_dashboard(
 
     question_clean = question.strip()
     if not question_clean:
-        return RedirectResponse(url="/coach", status_code=303)
+        return RedirectResponse(url="/coach#ask", status_code=303)
 
     user_id = request.state.user.id
     summaries = await round_service.list_rounds(user_id)

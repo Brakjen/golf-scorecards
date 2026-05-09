@@ -90,6 +90,7 @@ class Round(BaseModel):
     scoring_mode: str = "stroke"
     target_score: int | None = None
     holes_played: str = "18"
+    notes: str | None = None
     course_snapshot: str
     created_at: datetime
     updated_at: datetime
@@ -130,6 +131,7 @@ class RoundSummary(BaseModel):
     playing_handicap: int | None = None
     scoring_mode: str
     holes_played: str = "18"
+    notes: str | None = None
     total_score: int | None = None
     total_putts: int | None = None
     ud_count: int | None = None

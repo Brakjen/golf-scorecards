@@ -24,6 +24,7 @@ templates = get_templates()
 @router.get("/stats", response_class=HTMLResponse)
 async def stats_page(
     request: Request,
+    year: str | None = None,
     round_service: RoundService = Depends(get_round_service),
     settings_repo: SettingsRepository = Depends(get_settings_repo),
 ) -> HTMLResponse:
@@ -43,11 +44,23 @@ async def stats_page(
             stats = compute_quick_stats(stats_rounds)
             trends = compute_trends(stats_rounds, window=5)
 
+    parsed_year = int(year) if year and year.isdigit() else None
+    map_mode = request.query_params.get("mode", "birdie")
+    if map_mode not in ("birdie", "par"):
+        map_mode = "birdie"
+    birdie_map = await round_service.get_birdie_map(
+        request.state.user.id, year=parsed_year, mode=map_mode,
+    )
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
             request=request,
             name="stats.html",
-            context={"stats": stats, "trends": trends},
+            context={
+                "stats": stats,
+                "trends": trends,
+                "birdie_map": birdie_map,
+            },
         ),
     )

@@ -86,6 +86,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "user_id" not in existing:
         conn.execute("ALTER TABLE rounds ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
         conn.commit()
+
+    # Round-level notes
+    if "notes" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN notes TEXT")
+        conn.commit()
     if practice_cols and "user_id" not in practice_cols:
         conn.execute(
             "ALTER TABLE practice_sessions ADD COLUMN user_id TEXT NOT NULL DEFAULT ''"
