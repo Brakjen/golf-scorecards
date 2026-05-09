@@ -81,6 +81,47 @@ def serialize_rounds(
             lines.append("")
             continue
 
+        # ── Scramble round ───────────────────────────────
+        if r.scoring_mode == "scramble":
+            import json as _json
+            teammates = []
+            if r.teammates:
+                try:
+                    teammates = _json.loads(r.teammates)
+                except Exception:
+                    pass
+            lines.append(f"  Format: {r.team_size or '?'}-man Scramble")
+            if teammates:
+                lines.append(f"  Team: {', '.join(teammates)}")
+            scored = [h for h in r.holes if h.score is not None]
+            if scored:
+                total = sum(h.score for h in scored if h.score is not None)
+                total_par = sum(h.par for h in scored)
+                total_putts = sum(h.putts for h in scored if h.putts is not None)
+                rel = _relative(total - total_par)
+                lines.append(f"  Score: {total} (par {total_par}, {rel})")
+                lines.append(f"  Putts: {total_putts}")
+                # Drive usage
+                drive_counts: dict[str, int] = {}
+                for h in scored:
+                    if h.drive_used:
+                        drive_counts[h.drive_used] = drive_counts.get(h.drive_used, 0) + 1
+                if drive_counts:
+                    parts = [f"{tag}: {ct}" for tag, ct in sorted(drive_counts.items(), key=lambda x: -x[1])]
+                    lines.append(f"  Drives used: {', '.join(parts)}")
+                lines.append("  Holes:")
+                for h in scored:
+                    drive_label = h.drive_used or "—"
+                    lines.append(
+                        f"    H{h.hole_number} | P{h.par}"
+                        f" | {h.score} | Putts {h.putts or '?'}"
+                        f" | Drive {drive_label}"
+                    )
+            else:
+                lines.append("  (no scores entered)")
+            lines.append("")
+            continue
+
         scored = [h for h in r.holes if h.score is not None]
         if not scored:
             lines.append("  (no scores entered)")

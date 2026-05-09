@@ -135,6 +135,17 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE round_holes ADD COLUMN hole_result TEXT")
         conn.commit()
 
+    # Scramble columns on rounds
+    if "team_size" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN team_size INTEGER")
+        conn.execute("ALTER TABLE rounds ADD COLUMN teammates TEXT")
+        conn.commit()
+
+    # Scramble drive_used on round_holes
+    if "drive_used" not in hole_cols:
+        conn.execute("ALTER TABLE round_holes ADD COLUMN drive_used TEXT")
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

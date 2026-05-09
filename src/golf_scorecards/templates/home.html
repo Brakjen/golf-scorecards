@@ -54,6 +54,8 @@
             <label for="home-sm-stroke">Stroke</label>
             <input type="radio" name="scoring_mode" id="home-sm-match" value="match_play">
             <label for="home-sm-match">Match Play</label>
+            <input type="radio" name="scoring_mode" id="home-sm-scramble" value="scramble">
+            <label for="home-sm-scramble">Scramble</label>
           </div>
         </div>
 
@@ -75,6 +77,36 @@
             <input type="number" id="home-hc-allowance" name="hc_allowance" value="100" min="0" max="100" step="1">
           </label>
           <p id="home-strokes-preview" class="match-strokes-preview" style="display:none"></p>
+        </div>
+
+        <div id="home-scramble-fields" style="display:none">
+          <div class="field-group">
+            <span>Team size</span>
+            <div id="home-team-size-segmented" class="segmented-control">
+              <input type="radio" name="team_size" id="home-ts-2" value="2" checked>
+              <label for="home-ts-2">2</label>
+              <input type="radio" name="team_size" id="home-ts-3" value="3">
+              <label for="home-ts-3">3</label>
+              <input type="radio" name="team_size" id="home-ts-4" value="4">
+              <label for="home-ts-4">4</label>
+            </div>
+          </div>
+          <label>
+            <span>Your name (First Last)</span>
+            <input type="text" name="teammate_0" class="home-teammate-input" value="" placeholder="e.g. Bjørn Kjelby">
+          </label>
+          <label class="home-teammate-label" data-slot="1">
+            <span>Teammate 2</span>
+            <input type="text" name="teammate_1" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
+          <label class="home-teammate-label" data-slot="2" style="display:none">
+            <span>Teammate 3</span>
+            <input type="text" name="teammate_2" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
+          <label class="home-teammate-label" data-slot="3" style="display:none">
+            <span>Teammate 4</span>
+            <input type="text" name="teammate_3" class="home-teammate-input" value="" placeholder="First Last">
+          </label>
         </div>
 
         <button type="submit" id="round-submit-btn" disabled>Start entering scores</button>
@@ -136,12 +168,25 @@
 
   updateRoundTeeOptions(roundCourseSelect.value);
 
-  // Match play toggle
+  // Match play / Scramble toggle
   const homeMatchFields = document.getElementById("home-match-play-fields");
+  const homeScrambleFields = document.getElementById("home-scramble-fields");
   document.getElementById("round-format-segmented").addEventListener("change", (e) => {
-    const isMatch = e.target.value === "match_play";
-    homeMatchFields.style.display = isMatch ? "" : "none";
-    roundSubmitBtn.textContent = isMatch ? "Start match" : "Start entering scores";
+    const mode = e.target.value;
+    homeMatchFields.style.display = mode === "match_play" ? "" : "none";
+    homeScrambleFields.style.display = mode === "scramble" ? "" : "none";
+    if (mode === "match_play") roundSubmitBtn.textContent = "Start match";
+    else if (mode === "scramble") roundSubmitBtn.textContent = "Start scramble";
+    else roundSubmitBtn.textContent = "Start entering scores";
+  });
+
+  // Scramble team size toggle
+  document.getElementById("home-team-size-segmented").addEventListener("change", (e) => {
+    const size = parseInt(e.target.value);
+    document.querySelectorAll(".home-teammate-label").forEach((el) => {
+      const slot = parseInt(el.dataset.slot);
+      el.style.display = slot < size ? "" : "none";
+    });
   });
 
   // Strokes preview calculation

@@ -47,6 +47,17 @@ rounds. Instead, focus on:
 - Closing ability (performance on the final holes before the match ended)
 - Handicap difference and strokes given/received
 
+## Scramble rounds
+
+Rounds marked "Format: X-man Scramble" record the team's best-ball score, \
+putts, and whose drive was selected on each hole. There are NO individual \
+player scores, penalties, NFS, miss directions, or short-game metrics. \
+Do NOT mention those for scramble rounds. Instead, focus on:
+- Team score vs par and scoring patterns (birdies, pars, bogeys)
+- Putting as a team (putts per hole)
+- Drive contribution balance (who contributed the most/fewest drives)
+- Whether drive contributions match team size expectation
+
 ## Aspects to consider for stroke play (pick the most relevant)
 
 - Scoring patterns (birdies, bogeys, double+, par saves)
@@ -114,6 +125,14 @@ Rounds marked "Format: Match Play" only record win/loss/halve per hole — there
 are NO stroke scores, putts, penalties, NFS, miss directions, or short-game \
 metrics. Do NOT mention or speculate about any of those metrics for match play \
 rounds. Focus only on the data that is actually present.
+
+## Scramble rounds
+
+Rounds marked "Format: X-man Scramble" record the team's best-ball score, \
+putts, and whose drive was selected on each hole. There are NO individual \
+player scores, penalties, NFS, miss directions, or short-game metrics. \
+Do NOT mention those for scramble rounds. Focus on team score, putting, \
+and drive contributions.
 
 ## Rules
 

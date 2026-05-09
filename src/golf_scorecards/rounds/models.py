@@ -47,6 +47,7 @@ class RoundHole(BaseModel):
     down_in_3: int | None = None
     nfs: int | None = None
     hole_result: str | None = None
+    drive_used: str | None = None
     notes: str | None = None
 
 
@@ -93,6 +94,8 @@ class Round(BaseModel):
     opponent_name: str | None = None
     opponent_handicap: float | None = None
     strokes_given: int | None = None
+    team_size: int | None = None
+    teammates: str | None = None
     holes_played: str = "18"
     notes: str | None = None
     course_snapshot: str
@@ -136,6 +139,7 @@ class RoundSummary(BaseModel):
     scoring_mode: str
     holes_played: str = "18"
     opponent_name: str | None = None
+    team_size: int | None = None
     notes: str | None = None
     total_score: int | None = None
     total_putts: int | None = None

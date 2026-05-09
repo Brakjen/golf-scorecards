@@ -109,7 +109,7 @@ async def round_create(
     valid_holes = {"18", "front_9", "back_9"}
     hp = holes_played if holes_played in valid_holes else "18"
 
-    valid_modes = {"stroke", "stableford", "match_play"}
+    valid_modes = {"stroke", "stableford", "match_play", "scramble"}
     sm = scoring_mode if scoring_mode in valid_modes else "stroke"
 
     # Match play fields
@@ -147,6 +147,25 @@ async def round_create(
             except Exception:
                 sg = None
 
+    # Scramble fields
+    ts: int | None = None
+    teammates_json: str | None = None
+    if sm == "scramble":
+        form_data = await request.form()
+        try:
+            ts_raw = str(form_data.get("team_size", "2")).strip()
+            ts = int(ts_raw) if ts_raw else 2
+            if ts not in (2, 3, 4):
+                ts = 2
+        except ValueError:
+            ts = 2
+        names: list[str] = []
+        for i in range(ts):
+            raw_name = str(form_data.get(f"teammate_{i}", "") or "").strip()
+            if raw_name:
+                names.append(raw_name)
+        teammates_json = json.dumps(names) if names else None
+
     r = await round_service.create_round(
         course=course,
         tee=tee,
@@ -164,6 +183,8 @@ async def round_create(
         opponent_name=opp_name,
         opponent_handicap=opp_hc,
         strokes_given=sg,
+        team_size=ts,
+        teammates=teammates_json,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/play", status_code=303)
 
@@ -317,8 +338,11 @@ def _tile_state(hole: RoundHole) -> str:
     gate completion.
 
     For match play, a hole is done when hole_result is set.
+    For scramble, a hole is done when score and drive_used are set.
     """
     if hole.hole_result is not None:
+        return "done"
+    if hole.drive_used is not None and hole.score is not None:
         return "done"
     if hole.score is None:
         return "empty"
@@ -374,6 +398,23 @@ async def round_play_grid(
                     "holes": r.holes,
                     "stroke_map": stroke_map,
                     "match_result": match_result,
+                },
+            ),
+        )
+
+    # Scramble gets its own board.
+    if r.scoring_mode == "scramble":
+        teammate_tags = _scramble_tags(r.teammates)
+        return cast(
+            HTMLResponse,
+            templates.TemplateResponse(
+                request=request,
+                name="round_play_scramble_board.html",
+                context={
+                    "round": r,
+                    "snapshot": snapshot,
+                    "holes": r.holes,
+                    "teammate_tags": teammate_tags,
                 },
             ),
         )
@@ -478,6 +519,76 @@ def _score_label(delta: int) -> str:
         3: "+3",
         4: "+4",
     }.get(delta, f"{delta:+d}")
+
+
+def _scramble_tag(full_name: str) -> str:
+    """Build a short tag from a full name: first 3 of first + first 3 of last.
+
+    Examples:
+        "Bjørn Kjelby" → "BjøKje"
+        "Erik" → "Eri"
+        "Bo Li" → "BoLi"
+    """
+    parts = full_name.strip().split()
+    if not parts:
+        return "???"
+    first = parts[0][:3]
+    last = parts[-1][:3] if len(parts) > 1 else ""
+    return first + last
+
+
+def _scramble_tags(teammates_json: str | None) -> list[dict[str, str]]:
+    """Parse teammates JSON and return [{name, tag}, ...]."""
+    if not teammates_json:
+        return []
+    try:
+        names = json.loads(teammates_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return [{"name": n, "tag": _scramble_tag(n)} for n in names if n.strip()]
+
+
+@router.post("/rounds/{round_id}/play/scramble")
+async def round_play_scramble_save(
+    request: Request,
+    round_id: str,
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Save all scramble hole data from the board view."""
+    try:
+        r = await round_service.get_round(round_id, request.state.user.id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+
+    tags = _scramble_tags(r.teammates)
+    valid_tags = {t["tag"] for t in tags}
+
+    form = await request.form()
+    new_holes = []
+    for h in r.holes:
+        n = h.hole_number
+        score_raw = str(form.get(f"score_{n}", "") or "").strip()
+        putts_raw = str(form.get(f"putts_{n}", "") or "").strip()
+        drive_raw = str(form.get(f"drive_{n}", "") or "").strip()
+
+        score = int(score_raw) if score_raw else None
+        putts = int(putts_raw) if putts_raw else None
+        drive = drive_raw if drive_raw in valid_tags else None
+
+        new_holes.append(
+            RoundHole(
+                id=h.id, round_id=h.round_id,
+                hole_number=n, par=h.par,
+                distance=h.distance, handicap=h.handicap,
+                score=score, putts=putts, drive_used=drive,
+            )
+        )
+    await round_service.save_holes(round_id, new_holes, request.state.user.id)
+    return RedirectResponse(
+        url=f"/rounds/{round_id}/play", status_code=303,
+    )
 
 
 @router.post("/rounds/{round_id}/play/match")

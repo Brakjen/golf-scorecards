@@ -119,6 +119,16 @@ async def round_detail(
         if r.scoring_mode == "match_play" else None
     )
 
+    # Scramble context
+    scramble_tags: list[dict[str, str]] = []
+    drive_counts: dict[str, int] = {}
+    if r.scoring_mode == "scramble":
+        from golf_scorecards.web.routes.play import _scramble_tags
+        scramble_tags = _scramble_tags(r.teammates)
+        for h in r.holes:
+            if h.drive_used:
+                drive_counts[h.drive_used] = drive_counts.get(h.drive_used, 0) + 1
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -133,6 +143,8 @@ async def round_detail(
                 "round_insights": cached_insights,
                 "insights_enabled": insights_service is not None,
                 "match_result": match_result,
+                "scramble_tags": scramble_tags,
+                "drive_counts": drive_counts,
             },
         ),
     )

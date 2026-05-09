@@ -51,6 +51,33 @@
   </div>
   {% endif %}
 
+  {% elif round.scoring_mode == 'scramble' %}
+  <!-- ── Scramble stat bar ───────────────────────────────── -->
+  {% if stats.total_score is not none %}
+  <div class="stat-bar">
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.total_score }}</span>
+      <span class="stat-block__label">Score</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">
+        {% if stats.score_vs_par is not none %}
+          {% if stats.score_vs_par > 0 %}+{% endif %}{{ stats.score_vs_par }}
+        {% else %}—{% endif %}
+      </span>
+      <span class="stat-block__label">vs Par</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ stats.total_putts }}</span>
+      <span class="stat-block__label">Putts</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-block__value">{{ round.team_size or '—' }}</span>
+      <span class="stat-block__label">Team</span>
+    </div>
+  </div>
+  {% endif %}
+
   {% elif stats.total_score is not none %}
   <div class="stat-bar">
     <div class="stat-block">
@@ -136,6 +163,60 @@
         </tr>
         {% endfor %}
       </tbody>
+    </table>
+  </div>
+  {% elif round.scoring_mode == 'scramble' %}
+  <!-- ── Scramble scorecard ─────────────────────────────── -->
+  {% if scramble_tags %}
+  <div class="scramble-summary-grid">
+    {% for t in scramble_tags %}
+    <div class="scramble-drive-stat">
+      <div class="scramble-drive-stat__tag">{{ t.tag }}</div>
+      <div class="scramble-drive-stat__count">{{ drive_counts.get(t.tag, 0) }}</div>
+      <div class="scramble-drive-stat__label">drives</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="entry-grid-wrapper">
+    <table class="entry-grid detail-grid">
+      <thead>
+        <tr>
+          <th class="col-hole">Hole</th>
+          <th class="col-par">Par</th>
+          <th class="col-score">Score</th>
+          <th class="col-putts">Putts</th>
+          <th>Drive</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hole in round.holes %}
+        {% if hole.hole_number == 10 and round.holes_played == '18' %}
+        <tr class="turn-row"><td colspan="5">Turn</td></tr>
+        {% endif %}
+        <tr>
+          <td class="cell-fixed">{{ hole.hole_number }}</td>
+          <td class="cell-fixed">{{ hole.par }}</td>
+          <td class="cell-value cell-score">
+            {% if hole.score is not none %}
+            {% set diff = hole.score - hole.par %}
+            <span class="score-mark{% if diff <= -2 %} mark-eagle{% elif diff == -1 %} mark-birdie{% elif diff == 1 %} mark-bogey{% elif diff == 2 %} mark-double{% elif diff >= 3 %} mark-triple{% endif %}">{{ hole.score }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="cell-value">{{ hole.putts if hole.putts is not none else '—' }}</td>
+          <td class="cell-value scramble-detail-drive">{{ hole.drive_used or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="totals-row">
+          <td class="cell-fixed">Tot</td>
+          <td class="cell-fixed">{{ round.holes | map(attribute='par') | sum }}</td>
+          <td class="cell-value">{{ stats.total_score if stats.total_score is not none else '—' }}</td>
+          <td class="cell-value">{{ stats.total_putts if stats.total_putts else '—' }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
   {% else %}

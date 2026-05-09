@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS rounds (
     opponent_name   TEXT,
     opponent_handicap REAL,
     strokes_given   INTEGER,
+    team_size       INTEGER,
+    teammates       TEXT,
     holes_played    TEXT NOT NULL DEFAULT '18' CHECK(holes_played IN ('18', 'front_9', 'back_9')),
     notes           TEXT,
     course_snapshot TEXT NOT NULL,
@@ -48,6 +50,7 @@ CREATE TABLE IF NOT EXISTS round_holes (
     down_in_3       INTEGER,
     nfs             INTEGER,
     hole_result     TEXT,
+    drive_used      TEXT,
     notes           TEXT,
     UNIQUE(round_id, hole_number)
 );

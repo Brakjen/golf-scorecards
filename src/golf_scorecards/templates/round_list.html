@@ -35,6 +35,14 @@
         {% if match_results.get(r.id) %}
         <span class="stat-pill stat-pill--blue">{{ match_results[r.id] }}</span>
         {% endif %}
+        {% elif r.scoring_mode == 'scramble' %}
+        <span class="stat-pill stat-pill--match">Scramble {{ r.team_size or '' }}</span>
+        {% if r.total_score is not none %}
+        <span class="stat-pill stat-pill--blue">{{ r.total_score }}</span>
+        {% endif %}
+        {% if r.total_putts is not none %}
+        <span class="stat-pill stat-pill--muted">{{ r.total_putts }} putts</span>
+        {% endif %}
         {% else %}
         {% if r.total_score is not none %}
         <span class="stat-pill stat-pill--blue">{{ r.total_score }}</span>
