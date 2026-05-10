@@ -110,7 +110,7 @@ def compute_trends(rounds: list[Round], window: int = 5) -> Trends:
         ),
         TrendSeries(
             key="putts",
-            label="Putts",
+            label="Putts / hole",
             unit="",
             points=putts,
             higher_is_better=False,
@@ -153,11 +153,11 @@ def _score_vs_ph(r: Round) -> float | None:
 
 
 def _putts_total(r: Round) -> float | None:
-    """Total putts for the round, or ``None`` if no putts recorded."""
+    """Average putts per hole, keeping 9- and 18-hole rounds comparable."""
     putted = [h.putts for h in r.holes if h.putts is not None]
     if not putted:
         return None
-    return float(sum(putted))
+    return round(sum(putted) / len(putted), 2)
 
 
 def _stableford_rel(r: Round) -> float | None:
