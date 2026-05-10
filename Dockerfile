@@ -29,6 +29,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ── Runtime stage ────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 
+# Litestream — continuous SQLite replication to S3/Tigris
+ADD https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz /tmp/litestream.tar.gz
+RUN tar -C /usr/local/bin -xzf /tmp/litestream.tar.gz && rm /tmp/litestream.tar.gz
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
@@ -42,6 +46,8 @@ RUN groupadd --system app && useradd --system --gid app --home /app app
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app src ./src
+COPY --chown=app:app litestream.yml /app/litestream.yml
+COPY --chown=app:app run.sh /app/run.sh
 
 # Mount point for Fly volume; created at image build time so the
 # fallback path works even without a volume attached.
@@ -50,4 +56,4 @@ RUN mkdir -p /data && chown app:app /data
 USER app
 EXPOSE 8080
 
-CMD ["uvicorn", "golf_scorecards.main:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["/app/run.sh"]
