@@ -80,18 +80,27 @@ def compute_trends(rounds: list[Round], window: int = 5) -> Trends:
 
     chronological = list(reversed(selected))
 
+    hci: list[TrendPoint] = []
     score_vs_ph: list[TrendPoint] = []
     putts: list[TrendPoint] = []
     scrambling: list[TrendPoint] = []
     three_putts: list[TrendPoint] = []
 
     for r in chronological:
+        hci.append(TrendPoint(r.round_date, r.handicap_index))
         score_vs_ph.append(TrendPoint(r.round_date, _score_vs_ph(r)))
         putts.append(TrendPoint(r.round_date, _putts_total(r)))
         scrambling.append(TrendPoint(r.round_date, _scrambling_pct(r)))
         three_putts.append(TrendPoint(r.round_date, _three_putts(r)))
 
     series = [
+        TrendSeries(
+            key="hci",
+            label="Handicap Index",
+            unit="",
+            points=hci,
+            higher_is_better=False,
+        ),
         TrendSeries(
             key="score_vs_ph",
             label="Score vs handicap",

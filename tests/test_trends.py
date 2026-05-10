@@ -90,6 +90,7 @@ class TestComputeTrends:
         assert result.rounds_count == 2
         keys = [s.key for s in result.series]
         assert keys == [
+            "hci",
             "score_vs_ph",
             "putts",
             "scrambling",
