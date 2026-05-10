@@ -46,6 +46,7 @@ RUN groupadd --system app && useradd --system --gid app --home /app app
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app src ./src
+COPY --chown=app:app scripts ./scripts
 COPY --chown=app:app litestream.yml /app/litestream.yml
 COPY --chown=app:app run.sh /app/run.sh
 
