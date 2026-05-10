@@ -18,6 +18,7 @@ from datetime import date
 # Ensure the package is importable when run as a script
 sys.path.insert(0, "src")
 
+from golf_scorecards.catalog.repository import CourseCatalogRepository
 from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.config import get_settings
 from golf_scorecards.weather.service import fetch_weather
@@ -28,7 +29,7 @@ async def backfill() -> None:
     db_path = settings.db_path
 
     # Build a slug → (lat, lng) lookup from the course catalog
-    catalog = CatalogService()
+    catalog = CatalogService(CourseCatalogRepository())
     coords: dict[str, tuple[float, float]] = {}
     for course in catalog.list_courses():
         if course.latitude is not None and course.longitude is not None:
