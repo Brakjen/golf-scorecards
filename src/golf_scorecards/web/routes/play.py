@@ -69,6 +69,7 @@ async def round_create(
     tee_name: str = Form(),
     player_name: str = Form(default=""),
     round_date: str = Form(default=""),
+    tee_time: str = Form(default=""),
     holes_played: str = Form(default="18"),
     scoring_mode: str = Form(default="stroke"),
     opponent_name: str = Form(default=""),
@@ -91,6 +92,7 @@ async def round_create(
 
     parsed_date = date.fromisoformat(round_date) if round_date else date.today()
     parsed_name = player_name.strip() or None
+    parsed_tee_time = tee_time.strip() or None
 
     hci_raw = await settings_repo.get("handicap_index", request.state.user.id)
     hci = float(hci_raw) if hci_raw else None
@@ -166,12 +168,30 @@ async def round_create(
                 names.append(raw_name)
         teammates_json = json.dumps(names) if names else None
 
+    # Fetch weather for the round date + course location
+    w_code: int | None = None
+    w_temp: float | None = None
+    w_wind: float | None = None
+    w_precip: float | None = None
+    if course.latitude is not None and course.longitude is not None:
+        from golf_scorecards.weather.service import fetch_weather
+        weather = await fetch_weather(
+            course.latitude, course.longitude, parsed_date,
+            tee_time=parsed_tee_time, holes_played=hp,
+        )
+        if weather is not None:
+            w_code = weather.weather_code
+            w_temp = weather.temperature
+            w_wind = weather.wind_speed
+            w_precip = weather.precipitation
+
     r = await round_service.create_round(
         course=course,
         tee=tee,
         round_date=parsed_date,
         user_id=request.state.user.id,
         player_name=parsed_name,
+        tee_time=parsed_tee_time,
         handicap_index=hci,
         handicap_profile="men",
         playing_handicap=playing_hc,
@@ -185,6 +205,10 @@ async def round_create(
         strokes_given=sg,
         team_size=ts,
         teammates=teammates_json,
+        weather_code=w_code,
+        temperature=w_temp,
+        wind_speed=w_wind,
+        precipitation=w_precip,
     )
     return RedirectResponse(url=f"/rounds/{r.id}/play", status_code=303)
 
@@ -313,6 +337,24 @@ async def round_update_notes(
     try:
         cleaned = notes.strip() or None
         await round_service.update_notes(round_id, cleaned, request.state.user.id)
+    except RoundNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),
+        ) from exc
+    return RedirectResponse(url=f"/rounds/{round_id}", status_code=303)
+
+
+@router.post("/rounds/{round_id}/tee-time")
+async def round_update_tee_time(
+    request: Request,
+    round_id: str,
+    tee_time: str = Form(default=""),
+    round_service: RoundService = Depends(get_round_service),
+) -> RedirectResponse:
+    """Update the tee time on an existing round."""
+    try:
+        cleaned = tee_time.strip() or None
+        await round_service.update_tee_time(round_id, cleaned, request.state.user.id)
     except RoundNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc),

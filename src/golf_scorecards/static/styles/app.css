@@ -959,6 +959,30 @@ tfoot th {
   padding: 0;
   text-decoration: underline;
 }
+.btn-link--inline {
+  font-size: 0.8rem;
+  margin-left: 2px;
+  text-decoration: none;
+  opacity: 0.6;
+}
+.btn-link--inline:hover { opacity: 1; }
+
+.tee-time-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tee-time-form label span {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+.tee-time-form input[type="time"] {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
 
 .btn-sm {
   padding: 6px 14px;
@@ -3062,4 +3086,45 @@ body {
 .scramble-drive-stat__label {
   font-size: 0.7rem;
   opacity: 0.6;
+}
+
+/* ── Weather ─────────────────────────────────── */
+.weather-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  margin-left: 0.3em;
+  padding: 0.1em 0.5em;
+  background: var(--panel);
+  border-radius: 6px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.weather-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+  margin-left: 0.4em;
+  font-size: 0.85em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* ── Filter bar ──────────────────────────────── */
+.filter-bar {
+  margin-bottom: 1rem;
+}
+.filter-select {
+  padding: 0.45rem 0.75rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 220px;
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
 }

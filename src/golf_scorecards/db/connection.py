@@ -146,6 +146,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE round_holes ADD COLUMN drive_used TEXT")
         conn.commit()
 
+    # Tee time on rounds
+    if "tee_time" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN tee_time TEXT")
+        conn.commit()
+
+    # Weather columns on rounds
+    if "weather_code" not in existing:
+        conn.execute("ALTER TABLE rounds ADD COLUMN weather_code INTEGER")
+        conn.execute("ALTER TABLE rounds ADD COLUMN temperature REAL")
+        conn.execute("ALTER TABLE rounds ADD COLUMN wind_speed REAL")
+        conn.execute("ALTER TABLE rounds ADD COLUMN precipitation REAL")
+        conn.commit()
+
 
 async def get_connection(db_path: str) -> aiosqlite.Connection:
     """Open an async SQLite connection with WAL mode and foreign keys enabled.

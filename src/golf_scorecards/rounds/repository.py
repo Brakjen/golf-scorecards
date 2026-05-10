@@ -47,20 +47,24 @@ class RoundRepository:
             await conn.execute(
                 """INSERT INTO rounds (
                     id, user_id, course_slug, tee_name, player_name, round_date,
-                    handicap_index, handicap_profile, playing_handicap,
+                    tee_time, handicap_index, handicap_profile, playing_handicap,
                     course_rating, slope_rating, scoring_mode, target_score,
                     opponent_name, opponent_handicap, strokes_given,
                     team_size, teammates,
-                    holes_played, notes, course_snapshot, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    holes_played, notes,
+                    weather_code, temperature, wind_speed, precipitation,
+                    course_snapshot, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r.id, user_id, r.course_slug, r.tee_name, r.player_name,
-                    r.round_date.isoformat(), r.handicap_index,
+                    r.round_date.isoformat(), r.tee_time, r.handicap_index,
                     r.handicap_profile, r.playing_handicap,
                     r.course_rating, r.slope_rating, r.scoring_mode,
                     r.target_score, r.opponent_name, r.opponent_handicap,
                     r.strokes_given, r.team_size, r.teammates,
-                    r.holes_played, r.notes, r.course_snapshot,
+                    r.holes_played, r.notes,
+                    r.weather_code, r.temperature, r.wind_speed, r.precipitation,
+                    r.course_snapshot,
                     r.created_at.isoformat(), r.updated_at.isoformat(),
                 ),
             )
@@ -101,7 +105,7 @@ class RoundRepository:
         finally:
             await conn.close()
 
-    async def list_rounds(self, user_id: str) -> list[RoundSummary]:
+    async def list_rounds(self, user_id: str, *, course_slug: str | None = None) -> list[RoundSummary]:
         """Return all rounds as lightweight summaries, newest first.
 
         Computes aggregate statistics (total score, total putts, GIR count)
@@ -109,6 +113,7 @@ class RoundRepository:
 
         Args:
             user_id: The ID of the user whose rounds to list.
+            course_slug: Optional filter to only return rounds for this course.
 
         Returns:
             A list of ``RoundSummary`` objects ordered by round date
@@ -116,8 +121,13 @@ class RoundRepository:
         """
         conn = await self._conn()
         try:
+            where = "r.user_id = ?"
+            params: list[str] = [user_id]
+            if course_slug:
+                where += " AND r.course_slug = ?"
+                params.append(course_slug)
             cursor = await conn.execute(
-                """SELECT r.*,
+                f"""SELECT r.*,
                     (SELECT SUM(rh.score) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.score IS NOT NULL) AS total_score,
                     (SELECT SUM(rh.putts) FROM round_holes rh
@@ -128,9 +138,9 @@ class RoundRepository:
                      WHERE rh.round_id = r.id AND rh.down_in_3 IS NOT NULL) AS d3_count,
                     (SELECT COUNT(*) FROM round_holes rh
                      WHERE rh.round_id = r.id AND rh.putts >= 3) AS three_putt_count
-                FROM rounds r WHERE r.user_id = ?
+                FROM rounds r WHERE {where}
                 ORDER BY r.round_date DESC, r.created_at DESC""",
-                (user_id,),
+                params,
             )
             rows = await cursor.fetchall()
             return [
@@ -140,6 +150,7 @@ class RoundRepository:
                     tee_name=row["tee_name"],
                     player_name=row["player_name"],
                     round_date=date.fromisoformat(row["round_date"]),
+                    tee_time=row["tee_time"],
                     handicap_index=row["handicap_index"],
                     playing_handicap=row["playing_handicap"],
                     scoring_mode=row["scoring_mode"],
@@ -147,6 +158,10 @@ class RoundRepository:
                     opponent_name=row["opponent_name"],
                     team_size=row["team_size"],
                     notes=row["notes"],
+                    weather_code=row["weather_code"],
+                    temperature=row["temperature"],
+                    wind_speed=row["wind_speed"],
+                    precipitation=row["precipitation"],
                     total_score=row["total_score"],
                     total_putts=row["total_putts"],
                     ud_count=row["ud_count"],
@@ -221,6 +236,29 @@ class RoundRepository:
             cursor = await conn.execute(
                 "UPDATE rounds SET notes = ?, updated_at = ? WHERE id = ? AND user_id = ?",
                 (notes, now, round_id, user_id),
+            )
+            await conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            await conn.close()
+
+    async def update_tee_time(self, round_id: str, tee_time: str | None, user_id: str) -> bool:
+        """Update the tee time on an existing round.
+
+        Args:
+            round_id: The unique round identifier.
+            tee_time: The tee time string (e.g. ``"10:30"``), or ``None`` to clear.
+            user_id: The ID of the user who owns this round.
+
+        Returns:
+            ``True`` if the round was found and updated.
+        """
+        conn = await self._conn()
+        try:
+            now = datetime.now().isoformat()
+            cursor = await conn.execute(
+                "UPDATE rounds SET tee_time = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                (tee_time, now, round_id, user_id),
             )
             await conn.commit()
             return cursor.rowcount > 0
@@ -443,6 +481,7 @@ class RoundRepository:
             tee_name=row["tee_name"],
             player_name=row["player_name"],
             round_date=date.fromisoformat(row["round_date"]),
+            tee_time=row["tee_time"],
             handicap_index=row["handicap_index"],
             handicap_profile=row["handicap_profile"],
             playing_handicap=row["playing_handicap"],
@@ -457,6 +496,10 @@ class RoundRepository:
             teammates=row["teammates"],
             holes_played=row["holes_played"],
             notes=row["notes"],
+            weather_code=row["weather_code"],
+            temperature=row["temperature"],
+            wind_speed=row["wind_speed"],
+            precipitation=row["precipitation"],
             course_snapshot=row["course_snapshot"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),

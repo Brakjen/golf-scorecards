@@ -9,13 +9,15 @@ from __future__ import annotations
 import json
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from golf_scorecards.catalog.service import CatalogService
 from golf_scorecards.insights.service import InsightsService
 from golf_scorecards.rounds.match import compute_match_result
 from golf_scorecards.rounds.service import RoundNotFoundError, RoundService
 from golf_scorecards.web.dependencies import (
+    get_catalog_service,
     get_insights_service,
     get_round_service,
     get_templates,
@@ -33,11 +35,14 @@ templates = get_templates()
 @router.get("/rounds", response_class=HTMLResponse)
 async def round_list(
     request: Request,
+    course: str | None = None,
     round_service: RoundService = Depends(get_round_service),
+    catalog_service: CatalogService = Depends(get_catalog_service),
 ) -> HTMLResponse:
-    """Render the round history list."""
+    """Render the round history list with optional course filter."""
     user_id = request.state.user.id
-    summaries = await round_service.list_rounds(user_id)
+    course_slug = course if course else None
+    summaries = await round_service.list_rounds(user_id, course_slug=course_slug)
 
     round_stableford: dict[str, int] = {}
     match_results: dict[str, str] = {}
@@ -54,6 +59,8 @@ async def round_list(
         except RoundNotFoundError:
             continue
 
+    course_options = catalog_service.list_course_options()
+
     return cast(
         HTMLResponse,
         templates.TemplateResponse(
@@ -63,6 +70,8 @@ async def round_list(
                 "rounds": summaries,
                 "round_stableford": round_stableford,
                 "match_results": match_results,
+                "course_options": course_options,
+                "selected_course": course_slug or "",
             },
         ),
     )

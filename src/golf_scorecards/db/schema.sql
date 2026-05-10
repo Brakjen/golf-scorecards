@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS rounds (
     tee_name        TEXT NOT NULL,
     player_name     TEXT,
     round_date      TEXT NOT NULL,
+    tee_time        TEXT,
     handicap_index  REAL,
     handicap_profile TEXT,
     playing_handicap INTEGER,
@@ -28,6 +29,10 @@ CREATE TABLE IF NOT EXISTS rounds (
     teammates       TEXT,
     holes_played    TEXT NOT NULL DEFAULT '18' CHECK(holes_played IN ('18', 'front_9', 'back_9')),
     notes           TEXT,
+    weather_code    INTEGER,
+    temperature     REAL,
+    wind_speed      REAL,
+    precipitation   REAL,
     course_snapshot TEXT NOT NULL,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL

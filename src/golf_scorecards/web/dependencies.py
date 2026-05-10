@@ -47,7 +47,22 @@ def get_handicap_service() -> HandicapService:
 @lru_cache(maxsize=1)
 def get_templates() -> Jinja2Templates:
     """Return the singleton Jinja2 templates instance."""
-    return Jinja2Templates(directory=get_templates_directory())
+    from golf_scorecards.weather.models import WMO_ICONS
+
+    def weather_icon(code: int | None) -> str:
+        if code is None:
+            return ""
+        return WMO_ICONS.get(code, ("❓", "Unknown"))[0]
+
+    def weather_label(code: int | None) -> str:
+        if code is None:
+            return ""
+        return WMO_ICONS.get(code, ("❓", "Unknown"))[1]
+
+    tpl = Jinja2Templates(directory=get_templates_directory())
+    tpl.env.globals["weather_icon"] = weather_icon
+    tpl.env.globals["weather_label"] = weather_label
+    return tpl
 
 
 @lru_cache(maxsize=1)

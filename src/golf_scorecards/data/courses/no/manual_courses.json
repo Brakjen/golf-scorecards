@@ -784,7 +784,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 58.8897,
+      "longitude": 5.6797
     },
     {
       "club_name": "Sola golfklubb",
@@ -1181,7 +1183,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 58.8758,
+      "longitude": 5.6103
     },
     {
       "club_name": "Randaberg golfklubb",
@@ -1448,7 +1452,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 59.0272,
+      "longitude": 5.5916
     },
     {
       "club_name": "Stavanger golfklubb",
@@ -1975,7 +1981,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 58.9581,
+      "longitude": 5.6588
     },
     {
       "club_name": "Haugaland golfklubb",
@@ -2497,7 +2505,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 59.5532,
+      "longitude": 5.3656
     },
     {
       "club_name": "Kvinnherad golfklubb",
@@ -2764,7 +2774,9 @@
             }
           ]
         }
-      ]
+      ],
+      "latitude": 59.8662,
+      "longitude": 5.7653
     }
   ]
 }

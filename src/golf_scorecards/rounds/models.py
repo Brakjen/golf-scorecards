@@ -84,6 +84,7 @@ class Round(BaseModel):
     tee_name: str
     player_name: str | None = None
     round_date: date
+    tee_time: str | None = None
     handicap_index: float | None = None
     handicap_profile: str | None = None
     playing_handicap: int | None = None
@@ -98,6 +99,10 @@ class Round(BaseModel):
     teammates: str | None = None
     holes_played: str = "18"
     notes: str | None = None
+    weather_code: int | None = None
+    temperature: float | None = None
+    wind_speed: float | None = None
+    precipitation: float | None = None
     course_snapshot: str
     created_at: datetime
     updated_at: datetime
@@ -134,6 +139,7 @@ class RoundSummary(BaseModel):
     tee_name: str
     player_name: str | None = None
     round_date: date
+    tee_time: str | None = None
     handicap_index: float | None = None
     playing_handicap: int | None = None
     scoring_mode: str
@@ -141,6 +147,10 @@ class RoundSummary(BaseModel):
     opponent_name: str | None = None
     team_size: int | None = None
     notes: str | None = None
+    weather_code: int | None = None
+    temperature: float | None = None
+    wind_speed: float | None = None
+    precipitation: float | None = None
     total_score: int | None = None
     total_putts: int | None = None
     ud_count: int | None = None

@@ -1,8 +1,9 @@
 """Generate realistic dummy data for DEV mode.
 
-Populates an empty database with 30 rounds and 15 practice sessions showing
-a player improving from ~22 handicap to ~14 handicap. Short game improvement
-is the driver — putting and pitching averages decrease over time.
+Populates an empty database with rounds across multiple courses and 15
+practice sessions showing a player improving from ~22 handicap to ~14
+handicap. Short game improvement is the driver — putting and pitching
+averages decrease over time.
 """
 
 from __future__ import annotations
@@ -339,13 +340,97 @@ def _seed_user(conn: sqlite3.Connection) -> None:
 
 
 def _seed_rounds(conn: sqlite3.Connection) -> None:
-    """Insert 30 rounds showing HC 22 → 14 progression."""
+    """Insert rounds showing HC 22 → 14 progression across multiple courses."""
     start_date = date(2025, 10, 1)
+
+    # Load real course data from the catalog JSON
+    catalog_path = Path(__file__).parent / "data" / "courses" / "no" / "manual_courses.json"
+    with open(catalog_path, encoding="utf-8") as f:
+        catalog = json.load(f)
+
+    # Build course configs: (slug, tee_name, club_name, course_name, holes, par, dist, cr, sr)
+    COURSE_POOL: list[dict] = []
+    tee_picks = {
+        "sola-golfklubb-forus": "63",
+        "sola-golfklubb-solastranden": "50",
+        "stavanger-golfklubb": "58",
+        "haugaland-golfklubb-sveio-golfpark": "56",
+        "kvinnherad-golfklubb": "Gul",
+        "randaberg-golfklubb-tungenes": "Gul",
+    }
+    # Approximate CR/SR for seed data (exact values don't matter for dev)
+    approx_ratings = {
+        "sola-golfklubb-forus": (72.9, 144),
+        "sola-golfklubb-solastranden": (67.5, 126),
+        "stavanger-golfklubb": (71.2, 138),
+        "haugaland-golfklubb-sveio-golfpark": (70.8, 136),
+        "kvinnherad-golfklubb": (66.0, 120),
+        "randaberg-golfklubb-tungenes": (59.5, 108),
+    }
+    for c in catalog["courses"]:
+        slug = c["course_slug"]
+        if slug not in tee_picks:
+            continue
+        tee_name = tee_picks[slug]
+        for t in c["tees"]:
+            if t["tee_name"] == tee_name:
+                par = t.get("par_total") or sum(h["par"] for h in t["holes"])
+                dist = t.get("total_distance") or t.get("total_yards") or sum(h["distance"] for h in t["holes"])
+                cr, sr = approx_ratings.get(slug, (par + 1.0, 130))
+                COURSE_POOL.append({
+                    "slug": slug,
+                    "tee_name": tee_name,
+                    "club_name": c["club_name"],
+                    "course_name": c["course_name"],
+                    "holes": t["holes"],
+                    "par": par,
+                    "dist": dist,
+                    "cr": cr,
+                    "sr": sr,
+                })
+                break
+
+    # Weighted course selection: Forus is the home course (50%),
+    # others get equal share of the rest.
+    forus = [c for c in COURSE_POOL if c["slug"] == "sola-golfklubb-forus"][0]
+    others = [c for c in COURSE_POOL if c["slug"] != "sola-golfklubb-forus"]
+
+    # Seasonal weather codes: Oct-Nov = mixed/rainy, Dec-Feb = cold/snow,
+    # Mar-May = improving, Jun+ = clear.
+    def _weather_for_date(d: date) -> tuple[int, float, float, float]:
+        month = d.month
+        if month in (12, 1, 2):
+            code = random.choice([3, 45, 71, 73, 61])
+            temp = random.uniform(-3.0, 4.0)
+            wind = random.uniform(3.0, 14.0)
+            precip = random.uniform(0.0, 5.0)
+        elif month in (10, 11):
+            code = random.choice([2, 3, 61, 63, 80])
+            temp = random.uniform(3.0, 12.0)
+            wind = random.uniform(2.0, 12.0)
+            precip = random.uniform(0.0, 8.0)
+        elif month in (3, 4):
+            code = random.choice([1, 2, 3, 61, 80])
+            temp = random.uniform(4.0, 14.0)
+            wind = random.uniform(2.0, 10.0)
+            precip = random.uniform(0.0, 4.0)
+        else:  # May-Sep
+            code = random.choice([0, 1, 2, 3, 61])
+            temp = random.uniform(12.0, 22.0)
+            wind = random.uniform(1.0, 8.0)
+            precip = random.uniform(0.0, 2.0)
+        return code, round(temp, 1), round(wind, 1), round(precip, 1)
 
     for i in range(30):
         round_id = uuid.uuid4().hex
         # Handicap drops linearly: 22.0 → 14.0
         player_hcp = 22.0 - (8.0 * i / 29.0)
+
+        # Pick a course: ~50% Forus, rest spread across others
+        if random.random() < 0.50:
+            course = forus
+        else:
+            course = random.choice(others)
 
         # "Form" for this round: a small swing that adds slight variation
         # but preserves the overall downward trend. Good days and bad days
@@ -360,23 +445,42 @@ def _seed_rounds(conn: sqlite3.Connection) -> None:
         round_date = start_date + timedelta(days=i * 8 + random.randint(-2, 2))
         now = f"{round_date}T10:00:00"
 
+        w_code, w_temp, w_wind, w_precip = _weather_for_date(round_date)
+
+        # Random tee time between 07:00 and 14:00
+        tee_hour = random.randint(7, 14)
+        tee_minute = random.choice([0, 10, 20, 30, 40, 50])
+        tee_time = f"{tee_hour:02d}:{tee_minute:02d}"
+
+        snapshot = json.dumps({
+            "club_name": course["club_name"],
+            "course_name": course["course_name"],
+            "course_slug": course["slug"],
+            "tee_name": course["tee_name"],
+            "par_total": course["par"],
+            "total_distance": course["dist"],
+            "holes": course["holes"],
+        })
+
         conn.execute(
             """INSERT INTO rounds
                (id, user_id, course_slug, tee_name, player_name, round_date,
-                handicap_index, handicap_profile, playing_handicap,
+                tee_time, handicap_index, handicap_profile, playing_handicap,
                 course_rating, slope_rating, scoring_mode, target_score,
-                holes_played, course_snapshot, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                holes_played, weather_code, temperature, wind_speed, precipitation,
+                course_snapshot, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                round_id, DEV_USER_ID, "sola-golfklubb-forus", "63", "Dev Player",
-                round_date.isoformat(), player_hcp, "men", playing_hcp,
-                COURSE_RATING, SLOPE_RATING, "stroke", None,
-                "18", COURSE_SNAPSHOT, now, now,
+                round_id, DEV_USER_ID, course["slug"], course["tee_name"],
+                "Dev Player", round_date.isoformat(), tee_time, player_hcp, "men",
+                playing_hcp, course["cr"], course["sr"], "stroke", None,
+                "18", w_code, w_temp, w_wind, w_precip,
+                snapshot, now, now,
             ),
         )
 
         # Generate hole scores using effective_hcp (with form applied)
-        for hole in FORUS_HOLES:
+        for hole in course["holes"]:
             hole_data = _generate_hole_score(hole["par"], hole["handicap"], effective_hcp)
             conn.execute(
                 """INSERT INTO round_holes

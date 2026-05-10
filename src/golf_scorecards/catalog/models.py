@@ -80,6 +80,8 @@ class Course(BaseModel):
     club_name: str
     course_name: str
     course_slug: str
+    latitude: float | None = None
+    longitude: float | None = None
     tees: list[Tee]
 
 

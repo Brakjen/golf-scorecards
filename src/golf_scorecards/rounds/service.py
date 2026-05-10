@@ -35,6 +35,7 @@ class RoundService:
         round_date: date,
         user_id: str,
         player_name: str | None = None,
+        tee_time: str | None = None,
         handicap_index: float | None = None,
         handicap_profile: str | None = None,
         playing_handicap: int | None = None,
@@ -49,6 +50,10 @@ class RoundService:
         strokes_given: int | None = None,
         team_size: int | None = None,
         teammates: str | None = None,
+        weather_code: int | None = None,
+        temperature: float | None = None,
+        wind_speed: float | None = None,
+        precipitation: float | None = None,
     ) -> Round:
         """Create a new round with empty hole rows from the course snapshot.
 
@@ -121,6 +126,7 @@ class RoundService:
             tee_name=tee.tee_name,
             player_name=player_name,
             round_date=round_date,
+            tee_time=tee_time,
             handicap_index=handicap_index,
             handicap_profile=handicap_profile,
             playing_handicap=playing_handicap,
@@ -135,6 +141,10 @@ class RoundService:
             teammates=teammates,
             holes_played=holes_played,
             notes=notes,
+            weather_code=weather_code,
+            temperature=temperature,
+            wind_speed=wind_speed,
+            precipitation=precipitation,
             course_snapshot=snapshot,
             created_at=now,
             updated_at=now,
@@ -161,17 +171,18 @@ class RoundService:
             raise RoundNotFoundError(f"Round not found: {round_id}")
         return r
 
-    async def list_rounds(self, user_id: str) -> list[RoundSummary]:
+    async def list_rounds(self, user_id: str, *, course_slug: str | None = None) -> list[RoundSummary]:
         """Return all rounds as lightweight summaries, newest first.
 
         Args:
             user_id: The ID of the user whose rounds to list.
+            course_slug: Optional filter to only return rounds for this course.
 
         Returns:
             A list of ``RoundSummary`` objects with aggregated statistics,
             ordered by round date descending.
         """
-        return await self._repo.list_rounds(user_id)
+        return await self._repo.list_rounds(user_id, course_slug=course_slug)
 
     async def save_holes(self, round_id: str, holes: list[RoundHole], user_id: str) -> Round:
         """Save hole metric data and return the updated round.
@@ -213,6 +224,17 @@ class RoundService:
         if existing is None:
             raise RoundNotFoundError(f"Round not found: {round_id}")
         await self._repo.update_notes(round_id, notes, user_id)
+
+    async def update_tee_time(self, round_id: str, tee_time: str | None, user_id: str) -> None:
+        """Update tee time on an existing round.
+
+        Raises:
+            RoundNotFoundError: If no round with the given ID exists for this user.
+        """
+        existing = await self._repo.get_round(round_id, user_id)
+        if existing is None:
+            raise RoundNotFoundError(f"Round not found: {round_id}")
+        await self._repo.update_tee_time(round_id, tee_time, user_id)
 
     async def update_handicap(
         self,

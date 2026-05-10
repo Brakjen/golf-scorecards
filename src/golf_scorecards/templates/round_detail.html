@@ -14,8 +14,16 @@
         {% endif %}
         {% if round.player_name %} · {{ round.player_name }}{% endif %}
         · {{ round.round_date.isoformat() }}
+        {% if round.tee_time %} · <span id="tee-time-display">{{ round.tee_time }}</span>{% endif %}
+        <button type="button" class="btn-link btn-link--inline" onclick="toggleTeeTimeEdit()">{{ '✎' if round.tee_time else '+ tee time' }}</button>
         {% if round.handicap_index is not none %} · HCI {{ round.handicap_index }}{% endif %}
         {% if round.playing_handicap is not none %} · PH {{ round.playing_handicap }}{% endif %}
+        {% if round.weather_code is not none %}
+        <span class="weather-badge" title="{{ weather_label(round.weather_code) }}, {{ round.temperature }}°C, wind {{ round.wind_speed }} m/s, {{ round.precipitation }} mm">
+          {{ weather_icon(round.weather_code) }} {{ round.temperature }}°C
+          {% if round.wind_speed is not none and round.wind_speed >= 10.0 %} 💨{% endif %}
+        </span>
+        {% endif %}
       </p>
     </div>
     <div class="detail-actions">
@@ -104,6 +112,20 @@
   {% endif %}
 
   <section class="round-notes-section">
+    <!-- Tee time inline edit -->
+    <div class="tee-time-edit" id="tee-time-edit" style="display:none">
+      <form method="post" action="/rounds/{{ round.id }}/tee-time" class="tee-time-form">
+        <label>
+          <span>Tee time</span>
+          <input type="time" name="tee_time" value="{{ round.tee_time or '' }}">
+        </label>
+        <div class="round-notes-actions">
+          <button type="submit" class="btn-primary btn-sm">Save</button>
+          <button type="button" class="btn-secondary btn-sm" onclick="toggleTeeTimeEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
     <div class="round-notes-display" id="notes-display" {% if not round.notes %}style="display:none"{% endif %}>
       <p class="round-notes-text" id="notes-text">{{ round.notes or '' }}</p>
       <button type="button" class="btn-link" onclick="toggleNotesEdit(true)">Edit notes</button>
@@ -339,6 +361,10 @@
 function toggleNotesEdit(show) {
   document.getElementById('notes-display').style.display = show ? 'none' : '';
   document.getElementById('notes-edit').style.display = show ? '' : 'none';
+}
+function toggleTeeTimeEdit() {
+  var el = document.getElementById('tee-time-edit');
+  el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 </script>
 {% endblock %}

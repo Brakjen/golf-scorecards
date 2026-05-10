@@ -9,11 +9,29 @@
     <a href="/rounds/new" class="btn-primary">+ New round</a>
   </div>
 
+  <div class="filter-bar">
+    <select id="course-filter" class="filter-select" onchange="window.location.href = this.value ? '/rounds?course=' + encodeURIComponent(this.value) : '/rounds'">
+      <option value="">All courses</option>
+      {% for c in course_options %}
+      <option value="{{ c.course_slug }}" {% if selected_course == c.course_slug %}selected{% endif %}>
+        {{ c.display_name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
   {% if rounds %}
   <div class="round-list">
     {% for r in rounds %}
     <div class="round-card">
-      <div class="round-card__date">{{ r.round_date.strftime('%b %d, %Y') }}</div>
+      <div class="round-card__date">
+        {{ r.round_date.strftime('%b %d, %Y') }}
+        {% if r.weather_code is not none %}
+        <span class="weather-pill" title="{{ weather_label(r.weather_code) }}, {{ r.temperature }}°C{% if r.wind_speed is not none and r.wind_speed >= 10.0 %}, windy{% endif %}">
+          {{ weather_icon(r.weather_code) }} {{ r.temperature }}°
+        </span>
+        {% endif %}
+      </div>
       <div class="round-card__course">
         <a href="/rounds/{{ r.id }}" class="round-card__link">
           {{ r.course_slug | replace('-', ' ') | title }}
