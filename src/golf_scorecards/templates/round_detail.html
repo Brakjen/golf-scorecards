@@ -146,9 +146,12 @@
   {% if round.scoring_mode == 'match_play' %}
   <!-- ── Match play scorecard ───────────────────────────── -->
   <div class="match-opponent">
-    vs {{ round.opponent_name or 'Opponent' }}
-    {% if round.opponent_handicap is not none %} · HCI {{ round.opponent_handicap }}{% endif %}
-    {% if round.strokes_given is not none %} · Strokes: {{ round.strokes_given }}{% endif %}
+    {{ round.player_name or 'Me' }} vs {{ round.opponent_name or 'Opponent' }}
+    {% if round.handicap_index is not none %} · HCI {{ round.handicap_index }}{% endif %}
+    {% if round.opponent_handicap is not none %} / {{ round.opponent_handicap }}{% endif %}
+    {% if round.strokes_given is not none and round.strokes_given != 0 %}
+    · {{ round.strokes_given|abs }} stroke{{ 's' if round.strokes_given|abs != 1 }} {{ 'received' if round.strokes_given < 0 else 'given' }}
+    {% endif %}
   </div>
   <div class="entry-grid-wrapper">
     <table class="entry-grid detail-grid match-grid">
@@ -157,6 +160,7 @@
           <th class="col-hole">Hole</th>
           <th class="col-par">Par</th>
           <th class="col-hcp">HCP</th>
+          <th class="col-strokes">Strks</th>
           <th class="col-match-result">Result</th>
           <th class="col-match-status">Status</th>
         </tr>
@@ -164,13 +168,17 @@
       <tbody>
         {% for hole in round.holes %}
         {% if hole.hole_number == 10 and round.holes_played == '18' %}
-        <tr class="turn-row"><td colspan="5">Turn</td></tr>
+        <tr class="turn-row"><td colspan="6">Turn</td></tr>
         {% endif %}
         {% set closed = match_result.closed_at and hole.hole_number > match_result.closed_at %}
         <tr{% if closed %} class="match-row--closed"{% endif %}>
           <td class="cell-fixed">{{ hole.hole_number }}</td>
           <td class="cell-fixed">{{ hole.par }}</td>
           <td class="cell-fixed">{{ hole.handicap }}</td>
+          <td class="cell-fixed cell-strokes">
+            {% set s = match_stroke_map.get(hole.hole_number, 0) %}
+            {% if s > 0 %}+{{ s }}{% elif s < 0 %}{{ s }}{% endif %}
+          </td>
           <td class="cell-value cell-match-result">
             {% if hole.hole_result == 'win' %}<span class="match-mark match-mark--win">W</span>
             {% elif hole.hole_result == 'loss' %}<span class="match-mark match-mark--loss">L</span>

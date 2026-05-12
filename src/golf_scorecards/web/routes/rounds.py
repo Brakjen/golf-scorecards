@@ -127,6 +127,11 @@ async def round_detail(
         compute_match_result(r.holes)
         if r.scoring_mode == "match_play" else None
     )
+    match_stroke_map: dict[int, int] = {}
+    if r.scoring_mode == "match_play" and r.strokes_given is not None:
+        match_stroke_map = strokes_received_map(
+            snapshot["holes"], -r.strokes_given, played,
+        )
 
     # Scramble context
     scramble_tags: list[dict[str, str]] = []
@@ -152,6 +157,7 @@ async def round_detail(
                 "round_insights": cached_insights,
                 "insights_enabled": insights_service is not None,
                 "match_result": match_result,
+                "match_stroke_map": match_stroke_map,
                 "scramble_tags": scramble_tags,
                 "drive_counts": drive_counts,
             },

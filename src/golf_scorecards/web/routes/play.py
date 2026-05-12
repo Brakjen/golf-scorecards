@@ -427,7 +427,7 @@ async def round_play_grid(
     if r.scoring_mode == "match_play":
         played = {h.hole_number for h in r.holes}
         all_holes = snapshot.get("holes", [])
-        stroke_map = strokes_received_map(all_holes, r.strokes_given, played)
+        stroke_map = strokes_received_map(all_holes, -(r.strokes_given or 0), played)
         match_result = compute_match_result(r.holes)
         return cast(
             HTMLResponse,
@@ -517,7 +517,7 @@ async def round_play_hole(
         snapshot = json.loads(r.course_snapshot)
         all_holes = snapshot.get("holes", [])
         played = {h.hole_number for h in r.holes}
-        stroke_map = strokes_received_map(all_holes, r.strokes_given, played)
+        stroke_map = strokes_received_map(all_holes, -(r.strokes_given or 0), played)
         match_result = compute_match_result(r.holes)
         return cast(
             HTMLResponse,

@@ -20,7 +20,11 @@
   </header>
 
   <div class="match-grid-status">
-    <span>vs {{ round.opponent_name or 'Opponent' }}</span>
+    <span>vs {{ round.opponent_name or 'Opponent' }}
+      {% if round.strokes_given and round.strokes_given != 0 %}
+      · <span class="match-grid-status__strokes">{{ round.strokes_given|abs }} stroke{{ 's' if round.strokes_given|abs != 1 }} {{ 'received' if round.strokes_given < 0 else 'given' }}</span>
+      {% endif %}
+    </span>
     <span class="match-grid-status__score">{{ match_result.result_text }}</span>
   </div>
 
@@ -28,11 +32,12 @@
     <div class="match-board__header">
       <span class="match-board__col-hole">Hole</span>
       <span class="match-board__col-par">Par</span>
+      <span class="match-board__col-hcp">Idx</span>
+      <span class="match-board__col-strokes">Strks</span>
       <span class="match-board__col-result">W</span>
       <span class="match-board__col-result">½</span>
       <span class="match-board__col-result">L</span>
       <span class="match-board__col-status">Status</span>
-      <span class="match-board__col-dots"></span>
     </div>
 
     {% for hole in holes %}
@@ -40,6 +45,11 @@
     <div class="match-board__row{% if hole.hole_result %} match-board__row--done{% endif %}{% if closed %} match-board__row--closed{% endif %}">
       <span class="match-board__col-hole">{{ hole.hole_number }}</span>
       <span class="match-board__col-par">{{ hole.par }}</span>
+      <span class="match-board__col-hcp">{{ hole.handicap or '' }}</span>
+      <span class="match-board__col-strokes">
+        {% set s = stroke_map.get(hole.hole_number, 0) %}
+        {% if s > 0 %}+{{ s }}{% elif s < 0 %}{{ s }}{% endif %}
+      </span>
       <label class="match-board__radio match-board__radio--win">
         <input type="radio" name="result_{{ hole.hole_number }}" value="win"
                {% if hole.hole_result == 'win' %}checked{% endif %}{% if closed %} disabled{% endif %}>
@@ -58,11 +68,6 @@
       <span class="match-board__col-status" data-hole="{{ hole.hole_number }}">
         {% if match_result.hole_status and hole.hole_number in match_result.hole_status %}
         {{ match_result.hole_status[hole.hole_number] }}
-        {% endif %}
-      </span>
-      <span class="match-board__col-dots">
-        {% if stroke_map.get(hole.hole_number, 0) > 0 %}
-        <span class="match-stroke-dot" title="Stroke{{ 's' if stroke_map[hole.hole_number] > 1 }}">{{ '●' * stroke_map[hole.hole_number] }}</span>
         {% endif %}
       </span>
     </div>

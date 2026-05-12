@@ -2733,6 +2733,10 @@ body {
   color: var(--accent);
   font-size: 1.05rem;
 }
+.match-grid-status__strokes {
+  color: var(--accent);
+  font-weight: 500;
+}
 
 .match-result-buttons {
   display: flex;
@@ -2840,7 +2844,7 @@ body {
 }
 .match-board__header {
   display: grid;
-  grid-template-columns: 2.5rem 2.5rem 1fr 1fr 1fr 3.5rem 1.5rem;
+  grid-template-columns: 2.5rem 2.5rem 2rem 2rem 1fr 1fr 1fr 3.5rem;
   align-items: center;
   gap: 4px;
   padding: 8px 8px 6px;
@@ -2856,7 +2860,7 @@ body {
 }
 .match-board__row {
   display: grid;
-  grid-template-columns: 2.5rem 2.5rem 1fr 1fr 1fr 3.5rem 1.5rem;
+  grid-template-columns: 2.5rem 2.5rem 2rem 2rem 1fr 1fr 1fr 3.5rem;
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
@@ -2882,6 +2886,11 @@ body {
   color: var(--accent);
   text-align: center;
 }
+.cell-strokes {
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+}
 .match-row--closed {
   opacity: 0.3;
 }
@@ -2895,6 +2904,17 @@ body {
 }
 .match-board__col-dots {
   font-size: 0.7rem;
+}
+.match-board__col-strokes {
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--accent);
+  letter-spacing: -1px;
+}
+.match-board__col-hcp {
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--ink-muted, #8a9a8a);
 }
 .match-board__radio {
   display: flex;
