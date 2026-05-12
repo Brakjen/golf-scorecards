@@ -35,6 +35,83 @@ def _count_orphaned() -> int:
         conn.close()
 
 
+# Pricing per million tokens (as of 2025)
+_MODEL_PRICING: dict[str, tuple[float, float]] = {
+    # (input $/M, output $/M)
+    "gpt-4.1": (2.00, 8.00),
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
+    "o3": (2.00, 8.00),
+}
+
+
+def _get_usage_stats() -> dict:
+    """Aggregate API usage from agent_usage_log."""
+    settings = get_settings()
+    conn = sqlite3.connect(settings.db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        # Per-agent breakdown
+        rows = conn.execute("""
+            SELECT agent_key, model,
+                   COUNT(*) AS calls,
+                   SUM(prompt_tokens) AS prompt_tokens,
+                   SUM(completion_tokens) AS completion_tokens,
+                   SUM(cached) AS cached_tokens,
+                   ROUND(AVG(latency_ms)) AS avg_latency_ms
+            FROM agent_usage_log
+            GROUP BY agent_key, model
+            ORDER BY SUM(prompt_tokens + completion_tokens) DESC
+        """).fetchall()
+
+        agents = []
+        total_prompt = 0
+        total_completion = 0
+        total_cached = 0
+        total_cost = 0.0
+        total_calls = 0
+
+        for r in rows:
+            prompt = r["prompt_tokens"] or 0
+            completion = r["completion_tokens"] or 0
+            cached = r["cached_tokens"] or 0
+            model = r["model"]
+            input_price, output_price = _MODEL_PRICING.get(model, (2.50, 10.00))
+
+            # Cached tokens are charged at 50% of input price
+            full_input = prompt - cached
+            cost = (full_input * input_price + cached * input_price * 0.5 + completion * output_price) / 1_000_000
+
+            agents.append({
+                "agent_key": r["agent_key"],
+                "model": model,
+                "calls": r["calls"],
+                "prompt_tokens": prompt,
+                "completion_tokens": completion,
+                "cached_tokens": cached,
+                "avg_latency_ms": r["avg_latency_ms"],
+                "cost": cost,
+            })
+
+            total_prompt += prompt
+            total_completion += completion
+            total_cached += cached
+            total_cost += cost
+            total_calls += r["calls"]
+
+        return {
+            "agents": agents,
+            "total_prompt": total_prompt,
+            "total_completion": total_completion,
+            "total_cached": total_cached,
+            "total_cost": total_cost,
+            "total_calls": total_calls,
+        }
+    finally:
+        conn.close()
+
+
 @router.get("", response_class=HTMLResponse, response_model=None)
 async def admin_panel(request: Request) -> Response:
     """Show admin panel with user list."""
@@ -48,6 +125,7 @@ async def admin_panel(request: Request) -> Response:
     admin_user = getattr(request.state, "admin_user", None) or request.state.user
     impersonating_id = request.session.get("impersonate_user_id")
     orphaned_count = _count_orphaned()
+    usage = _get_usage_stats()
 
     return templates.TemplateResponse(
         request=request,
@@ -57,6 +135,7 @@ async def admin_panel(request: Request) -> Response:
             "admin_user": admin_user,
             "impersonating_id": impersonating_id,
             "orphaned_count": orphaned_count,
+            "usage": usage,
         },
     )
 

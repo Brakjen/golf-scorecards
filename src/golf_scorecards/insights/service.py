@@ -1,4 +1,8 @@
-"""OpenAI chat completion integration and insights caching."""
+"""Insights caching and LLM coaching integration.
+
+Delegates all LLM calls to :class:`~golf_scorecards.agents.service.AgentService`
+while retaining its own caching layer.
+"""
 
 from __future__ import annotations
 
@@ -9,11 +13,9 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from openai import AsyncOpenAI
-
+from golf_scorecards.agents.service import AgentService
 from golf_scorecards.db.connection import get_connection
 from golf_scorecards.insights.prompts import (
-    QA_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
     build_qa_user_message,
     build_user_message,
@@ -60,7 +62,7 @@ class InsightsService:
         db_path: str,
         model: str = "gpt-4o",
     ) -> None:
-        self._client = AsyncOpenAI(api_key=api_key)
+        self._agent = AgentService(api_key=api_key, db_path=db_path)
         self._db_path = db_path
         self._model = model
 
@@ -189,7 +191,7 @@ class InsightsService:
     # ── Private helpers ──────────────────────────────────
 
     async def _call_openai(self, user_message: str) -> list[str]:
-        """Make the chat completion API call and parse the response.
+        """Make the chat completion API call via AgentService.
 
         Args:
             user_message: The formatted user message with round data.
@@ -200,16 +202,11 @@ class InsightsService:
         Raises:
             ValueError: If the response is not a valid JSON array of strings.
         """
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.7,
-            max_tokens=1024,
+        content = await self._agent.call_oneshot(
+            "round_insights",
+            user_message,
+            system_override=SYSTEM_PROMPT,
         )
-        content = response.choices[0].message.content or ""
         return self._parse_response(content)
 
     @staticmethod
@@ -319,7 +316,7 @@ class InsightsService:
     # ── Q&A helpers ──────────────────────────────────────
 
     async def _call_openai_qa(self, user_message: str) -> str:
-        """Call the chat API for a free-form Q&A request.
+        """Call the chat API for a free-form Q&A request via AgentService.
 
         Args:
             user_message: The formatted user message containing round
@@ -328,13 +325,11 @@ class InsightsService:
         Returns:
             The model's plain-prose answer (whitespace stripped).
         """
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[
-                {"role": "system", "content": QA_SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.5,
-            max_tokens=1024,
+        from golf_scorecards.insights.prompts import QA_SYSTEM_PROMPT
+
+        content = await self._agent.call_oneshot(
+            "qa",
+            user_message,
+            system_override=QA_SYSTEM_PROMPT,
         )
-        return (response.choices[0].message.content or "").strip()
+        return content.strip()

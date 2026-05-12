@@ -52,5 +52,61 @@
     </div>
   </section>
   {% endif %}
+
+  <!-- ── API Usage ─────────────────────────────────────── -->
+  <section class="admin-usage">
+    <h2>API Usage</h2>
+    {% if usage.total_calls > 0 %}
+    <div class="admin-usage__summary">
+      <div class="admin-usage__stat">
+        <span class="admin-usage__value">{{ usage.total_calls }}</span>
+        <span class="admin-usage__label">API calls</span>
+      </div>
+      <div class="admin-usage__stat">
+        <span class="admin-usage__value">{{ "{:,}".format(usage.total_prompt + usage.total_completion) }}</span>
+        <span class="admin-usage__label">Total tokens</span>
+      </div>
+      <div class="admin-usage__stat">
+        <span class="admin-usage__value">{{ "{:,}".format(usage.total_cached) }}</span>
+        <span class="admin-usage__label">Cached tokens</span>
+      </div>
+      <div class="admin-usage__stat">
+        <span class="admin-usage__value">${{ "%.4f"|format(usage.total_cost) }}</span>
+        <span class="admin-usage__label">Estimated cost</span>
+      </div>
+    </div>
+
+    <table class="admin-usage__table">
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Model</th>
+          <th>Calls</th>
+          <th>Prompt</th>
+          <th>Completion</th>
+          <th>Cached</th>
+          <th>Avg latency</th>
+          <th>Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in usage.agents %}
+        <tr>
+          <td>{{ a.agent_key }}</td>
+          <td><code>{{ a.model }}</code></td>
+          <td>{{ a.calls }}</td>
+          <td>{{ "{:,}".format(a.prompt_tokens) }}</td>
+          <td>{{ "{:,}".format(a.completion_tokens) }}</td>
+          <td>{{ "{:,}".format(a.cached_tokens) }}</td>
+          <td>{{ a.avg_latency_ms|int }}ms</td>
+          <td>${{ "%.4f"|format(a.cost) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No API calls recorded yet.</p>
+    {% endif %}
+  </section>
 </main>
 {% endblock %}

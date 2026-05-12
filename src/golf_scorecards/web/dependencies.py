@@ -5,6 +5,7 @@ from importlib.resources import files
 
 from starlette.templating import Jinja2Templates
 
+from golf_scorecards.agents.service import AgentService
 from golf_scorecards.auth.repository import UserRepository
 from golf_scorecards.auth.service import AuthService
 from golf_scorecards.catalog.repository import CourseCatalogRepository
@@ -62,6 +63,48 @@ def get_templates() -> Jinja2Templates:
     tpl = Jinja2Templates(directory=get_templates_directory())
     tpl.env.globals["weather_icon"] = weather_icon
     tpl.env.globals["weather_label"] = weather_label
+
+    import markdown as _md
+    import re as _re
+    from markupsafe import Markup
+
+    _RULE_RE = _re.compile(
+        r'(?<!/)'           # not preceded by / (avoids matching inside URLs)
+        r'(Rules?\s+)'      # "Rule " or "Rules " prefix
+        r'(\d+)'            # main rule number
+        r'(\.\d+[a-z]?)?'   # optional sub-section like .3b
+        r'(\(\d+\))?'       # optional sub-item like (2)
+    )
+
+    def _rule_link(m: _re.Match) -> str:
+        prefix = m.group(1)          # "Rule " or "Rules "
+        rule_num = m.group(2)        # "14"
+        sub = m.group(3) or ""       # ".3b" or ""
+        sub_item = m.group(4) or ""  # "(2)" or ""
+        display = f"{prefix}{rule_num}{sub}{sub_item}"
+        base = f"https://www.randa.org/rog/the-rules-of-golf/rule-{rule_num}"
+        if sub:
+            anchor = f"{rule_num}{sub}".replace(".", "_")
+            url = f"{base}#{anchor}"
+        else:
+            url = base
+        return f'<a href="{url}" target="_blank" rel="noopener">{display}</a>'
+
+    def _linkify_rules(html: str) -> str:
+        # Skip content already inside <a> tags
+        parts = _re.split(r'(<a\s[^>]*>.*?</a>)', html, flags=_re.DOTALL)
+        return "".join(
+            _RULE_RE.sub(_rule_link, part) if not part.startswith("<a ") else part
+            for part in parts
+        )
+
+    def md(text: str) -> Markup:
+        """Render markdown to HTML with auto-linked rule citations."""
+        html = _md.markdown(text, extensions=["fenced_code", "tables"])
+        html = _linkify_rules(html)
+        return Markup(html)
+
+    tpl.env.filters["md"] = md
     return tpl
 
 
@@ -100,6 +143,15 @@ def get_insights_service() -> InsightsService | None:
     if not settings.openai_api_key:
         return None
     return InsightsService(api_key=settings.openai_api_key, db_path=settings.db_path)
+
+
+@lru_cache(maxsize=1)
+def get_agent_service() -> AgentService | None:
+    """Return the singleton agent service, or ``None`` if no API key is set."""
+    settings = get_settings()
+    if not settings.openai_api_key:
+        return None
+    return AgentService(api_key=settings.openai_api_key, db_path=settings.db_path)
 
 
 @lru_cache(maxsize=1)

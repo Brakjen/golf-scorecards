@@ -40,6 +40,10 @@
         <span class="tab-bar__icon" aria-hidden="true">🧠</span>
         <span class="tab-bar__label">Coach</span>
       </a>
+      <a href="/chat" class="tab-bar__item{% if _path.startswith('/chat') %} is-active{% endif %}" data-tab="chat">
+        <span class="tab-bar__icon" aria-hidden="true">📖</span>
+        <span class="tab-bar__label">Rules</span>
+      </a>
       <a href="/settings" class="tab-bar__item{% if _path == '/settings' %} is-active{% endif %}" data-tab="settings">
         <span class="tab-bar__icon" aria-hidden="true">⚙️</span>
         <span class="tab-bar__label">Settings</span>

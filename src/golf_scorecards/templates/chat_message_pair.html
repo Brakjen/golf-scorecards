@@ -1,0 +1,9 @@
+<div class="chat-bubble chat-bubble--user">
+  <button type="button" class="chat-copy" title="Copy to clipboard">📋</button>
+  <div class="chat-bubble__content">{{ user_message }}</div>
+</div>
+<div class="chat-bubble chat-bubble--assistant">
+  <button type="button" class="chat-copy" title="Copy to clipboard">📋</button>
+  <div class="chat-bubble__content">{{ assistant_message | md }}</div>
+</div>
+{% if updated_title %}<span class="chat-title-update" data-title="{{ updated_title }}" hidden></span>{% endif %}

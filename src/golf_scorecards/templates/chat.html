@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Chat{% endblock %}
+
+{% block body %}
+<main class="page-shell page-shell--wide">
+  <div class="chat-layout">
+    <!-- ── Sidebar ───────────────────────────────────── -->
+    <aside class="chat-sidebar">
+      <div class="chat-sidebar__header">
+        <h2 class="chat-sidebar__title">Conversations</h2>
+        {% if enabled %}
+        <a href="/chat/new?agent=rules" class="btn btn--sm btn--accent">+ New</a>
+        {% endif %}
+      </div>
+
+      {% if conversations %}
+      <ul class="chat-sidebar__list">
+        {% for conv in conversations %}
+        <li class="chat-sidebar__item{% if current_conversation and current_conversation.id == conv.id %} is-active{% endif %}">
+          <a href="/chat/{{ conv.id }}" class="chat-sidebar__link">
+            <span class="chat-sidebar__agent">{{ conv.agent_key }}</span>
+            <span class="chat-sidebar__conv-title">{{ conv.title or 'New conversation' }}</span>
+            <span class="chat-sidebar__meta">
+              <span>{{ conv.message_count }} msg{{ 's' if conv.message_count != 1 }}</span>
+              <span>{{ conv.updated_at[:16].replace('T', ' ') }}</span>
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="chat-sidebar__empty">No conversations yet.</p>
+      {% endif %}
+    </aside>
+
+    <!-- ── Main chat area ────────────────────────────── -->
+    <section class="chat-main">
+      {% if current_conversation %}
+        <div class="chat-header">
+          <div class="chat-header__info">
+            <h1 class="chat-header__title">{{ current_conversation.title or 'New conversation' }}</h1>
+            <span class="chat-header__agent">{{ current_conversation.agent_key }} agent</span>
+          </div>
+          <form method="post" action="/chat/{{ current_conversation.id }}/delete"
+                onsubmit="return confirm('Delete this conversation?')">
+            <button type="submit" class="btn btn--sm btn--danger" title="Delete conversation">🗑</button>
+          </form>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          {% for msg in current_conversation.messages %}
+          <div class="chat-bubble chat-bubble--{{ msg.role }}">
+            <button type="button" class="chat-copy" title="Copy to clipboard">📋</button>
+            <div class="chat-bubble__content">{% if msg.role == 'assistant' %}{{ msg.content | md }}{% else %}{{ msg.content }}{% endif %}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <form class="chat-input" method="post" action="/chat/{{ current_conversation.id }}/message"
+              id="chat-form">
+          <textarea name="message" class="chat-input__textarea" placeholder="Ask a question about the rules…"
+                    rows="2" required autofocus></textarea>
+          <button type="submit" class="btn btn--accent chat-input__send" id="chat-send">Send</button>
+        </form>
+
+        <script>
+        (function() {
+          const form = document.getElementById('chat-form');
+          const messages = document.getElementById('chat-messages');
+          const textarea = form.querySelector('textarea');
+          const sendBtn = document.getElementById('chat-send');
+
+          // Auto-scroll to bottom
+          messages.scrollTop = messages.scrollHeight;
+
+          // Submit via fetch for inline response
+          form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msg = textarea.value.trim();
+            if (!msg) return;
+
+            // Show user message immediately
+            const userBubble = document.createElement('div');
+            userBubble.className = 'chat-bubble chat-bubble--user';
+            userBubble.innerHTML = '<div class="chat-bubble__content">' + escapeHtml(msg) + '</div>';
+            messages.appendChild(userBubble);
+
+            // Show thinking indicator
+            const thinkingBubble = document.createElement('div');
+            thinkingBubble.className = 'chat-bubble chat-bubble--assistant chat-bubble--thinking';
+            thinkingBubble.innerHTML = '<div class="chat-bubble__content">Thinking…</div>';
+            messages.appendChild(thinkingBubble);
+            messages.scrollTop = messages.scrollHeight;
+
+            // Disable input while waiting
+            textarea.value = '';
+            textarea.disabled = true;
+            sendBtn.disabled = true;
+
+            try {
+              const formData = new FormData();
+              formData.append('message', msg);
+              const resp = await fetch(form.action, {method: 'POST', body: formData});
+              const html = await resp.text();
+
+              // Remove thinking bubble and user bubble (they come back in the response)
+              thinkingBubble.remove();
+              userBubble.remove();
+
+              // Append the server-rendered message pair
+              messages.insertAdjacentHTML('beforeend', html);
+              messages.scrollTop = messages.scrollHeight;
+
+              // Update title if the server generated one
+              var titleEl = messages.querySelector('.chat-title-update');
+              if (titleEl) {
+                var newTitle = titleEl.dataset.title;
+                var headerTitle = document.querySelector('.chat-header__title');
+                if (headerTitle) headerTitle.textContent = newTitle;
+                var sidebarItem = document.querySelector('.chat-sidebar__item.is-active .chat-sidebar__conv-title');
+                if (sidebarItem) sidebarItem.textContent = newTitle;
+                titleEl.remove();
+              }
+            } catch (err) {
+              thinkingBubble.innerHTML = '<div class="chat-bubble__content">Error: ' + err.message + '</div>';
+            } finally {
+              textarea.disabled = false;
+              sendBtn.disabled = false;
+              textarea.focus();
+            }
+          });
+
+          // Submit on Enter (Shift+Enter for newline)
+          textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              form.dispatchEvent(new Event('submit'));
+            }
+          });
+
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          // Copy button handler (delegated so it works for dynamically added bubbles)
+          function copyToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+              return navigator.clipboard.writeText(text);
+            }
+            // Fallback for non-HTTPS contexts
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve();
+          }
+
+          messages.addEventListener('click', function(e) {
+            var btn = e.target.closest('.chat-copy');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var content = btn.closest('.chat-bubble').querySelector('.chat-bubble__content');
+            var text = content.innerText || content.textContent;
+            copyToClipboard(text).then(function() {
+              btn.textContent = '✓';
+              btn.classList.add('chat-copy--done');
+              setTimeout(function() {
+                btn.textContent = '📋';
+                btn.classList.remove('chat-copy--done');
+              }, 1500);
+            });
+          });
+        })();
+        </script>
+
+      {% elif enabled %}
+        <div class="chat-empty">
+          <p>Select a conversation from the sidebar or start a new one.</p>
+          <a href="/chat/new?agent=rules" class="btn btn--accent">Start a Rules Conversation</a>
+        </div>
+      {% else %}
+        <div class="chat-empty">
+          <p>Chat requires an OpenAI API key. Configure <code>OPENAI_API_KEY</code> to get started.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

@@ -93,3 +93,35 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
     nfs             INTEGER NOT NULL DEFAULT 0,
     UNIQUE(session_id, station_slug, attempt_number)
 );
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id              TEXT PRIMARY KEY,
+    user_id         TEXT NOT NULL,
+    agent_key       TEXT NOT NULL,
+    title           TEXT,
+    context_json    TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id              TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    role            TEXT NOT NULL,
+    content         TEXT NOT NULL,
+    tokens_used     INTEGER,
+    created_at      TEXT NOT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS agent_usage_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_key       TEXT NOT NULL,
+    model           TEXT NOT NULL,
+    prompt_tokens   INTEGER NOT NULL,
+    completion_tokens INTEGER NOT NULL,
+    latency_ms      INTEGER NOT NULL,
+    cached          INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL
+);

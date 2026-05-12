@@ -9,3 +9,5 @@ build/
 *.egg-info/
 *.db
 .DS_Store
+*.pdf
+2023_Rules_of_Golf_plain_text.txt

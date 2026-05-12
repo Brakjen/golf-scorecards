@@ -10,6 +10,7 @@ from fastapi import APIRouter
 from golf_scorecards.web import auth
 from golf_scorecards.web.routes import (
     admin,
+    chat,
     coach,
     dashboard,
     play,
@@ -27,6 +28,7 @@ router.include_router(practice.router)
 router.include_router(rounds.router)
 router.include_router(stats.router)
 router.include_router(coach.router)
+router.include_router(chat.router)
 router.include_router(settings.router)
 router.include_router(admin.router)
 

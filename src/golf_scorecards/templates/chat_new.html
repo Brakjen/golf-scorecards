@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}New Conversation{% endblock %}
+
+{% block body %}
+<main class="page-shell">
+  <h1 class="page-title">New Conversation</h1>
+
+  <form method="post" action="/chat/new" class="landing-card form-stack">
+    <input type="hidden" name="agent" value="{{ agent_key }}">
+
+    <div class="form-group">
+      <label class="form-label">Agent</label>
+      <p class="form-value">{{ agent_key | capitalize }} — {{ agent_config.model }}</p>
+    </div>
+
+    {% if agent_key == 'rules' and courses %}
+    <div class="form-group">
+      <label class="form-label" for="course_slug">Course (optional)</label>
+      <select name="course_slug" id="course_slug" class="form-select">
+        <option value="">— General rules question —</option>
+        {% for c in courses %}
+        <option value="{{ c.course_slug }}">{{ c.display_name }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-hint">Select a course to include its local rules in context.</p>
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn--accent">Start Conversation</button>
+  </form>
+</main>
+{% endblock %}
